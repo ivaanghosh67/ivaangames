@@ -29,7 +29,8 @@ echo "── server → /opt/ironline ──────────────
 set -euo pipefail
 sudo mkdir -p /opt/ironline
 # Keep node_modules across deploys; only refresh it when package.json moves.
-sudo rsync -a --delete --exclude node_modules /tmp/ironline-deploy/server/ /opt/ironline/
+# --exclude .env: the database credentials live there and must survive deploys
+sudo rsync -a --delete --exclude node_modules --exclude .env /tmp/ironline-deploy/server/ /opt/ironline/
 cd /opt/ironline
 if [ ! -d node_modules ] || [ package.json -nt node_modules ]; then
   echo "installing dependencies…"

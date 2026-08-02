@@ -396,6 +396,7 @@
             <button data-t="host" class="on">Host a game</button>
             <button data-t="join">Join with code</button>
             <button data-t="browse">Public games</button>
+            <button data-t="records">Records</button>
           </div>
 
           <div class="onPane on" data-p="host">
@@ -425,6 +426,23 @@
           <div class="onPane" data-p="browse">
             <div id="roomList"><div class="empty">Looking for open games…</div></div>
             <button id="bRefresh">Refresh</button>
+          </div>
+
+          <div class="onPane" data-p="records">
+            <div id="profileCard"><div class="empty">Loading your record…</div></div>
+            <div class="fRow" style="margin-top:8px">
+              <label>Board</label>
+              <select id="boardDiff"></select>
+              <select id="boardParty">
+                <option value="1">Solo</option><option value="2">Duo</option>
+                <option value="3">Trio</option><option value="4">Squad</option>
+              </select>
+              <select id="boardKind">
+                <option value="deepest">Deepest wave</option>
+                <option value="fastest">Fastest clear</option>
+              </select>
+            </div>
+            <div id="boardList"><div class="empty">Pick a board.</div></div>
           </div>
 
           <div id="roomBox" style="display:none;margin-top:11px">
@@ -4026,7 +4044,8 @@ function netConnect(){
   NET.ws=ws;
   ws.onopen=()=>{
     NET.tries=0; NET.state='connected';
-    netSend({type:'hello',token:NET.token,name:NET.name||'Player',unlocked:[...questUnlocked()]});
+    netSend({type:'hello',token:NET.token,name:NET.name||'Player',
+      unlocked:[...questUnlocked()],progress:{...QP}});
     paintNetStatus();
   };
   ws.onmessage=ev=>{
@@ -4061,12 +4080,29 @@ function netHandle(m){
       NET.token=m.token;
       try{ localStorage.setItem('ironline.token',m.token); }catch(_){}
       netFillMaps(m.maps||[]);
+      NET.persistence=!!m.persistence;
       // Deep link: /ivaangames/?room=ABCDE drops you straight into a friend's game.
       const want=new URLSearchParams(location.search).get('room');
       if(want&&!NET.room){ $on('joinCode').value=want.toUpperCase(); netSend({type:'join',code:want}); }
       else if(NET.room) netSend({type:'join',code:NET.room.code});   // resume after a drop
       else netSend({type:'list'});
       break;
+    case 'progress': {
+      // The server holds the canonical copy across browsers and machines. Take
+      // the maximum of each counter so an offline session is never punished and
+      // a stale server row never erases newer local play.
+      const p=m.progress; if(!p) break;
+      let changed=false;
+      for(const k of ['flyerKills','bossKills','bestWave']){
+        if(Number.isFinite(p[k])&&p[k]>(QP[k]||0)){ QP[k]=p[k]; changed=true; }
+      }
+      NET.totals=p; NET.linked=!!m.linked;
+      if(changed){ saveQuests(); for(const q of QUESTS) if(questDone(q)) UNLOCKED.add(q.gun); saveUnlocks(); }
+      paintQuests(); if(settingsOpen) paintSettings();
+      break;
+    }
+    case 'board':   paintBoard(m); break;
+    case 'profile': paintProfile(m.profile); break;
     case 'rooms': paintRoomList(m.rooms||[]); break;
     case 'joined':
       NET.seat=m.seat; NET.isHost=!!m.isHost;
@@ -4469,6 +4505,65 @@ function paintMpBar(){
     bar.appendChild(d);
   }
 }
+// ── profile and leaderboards ────────────────────────────────────────────────
+const secs2str=s=>{ s=Math.max(0,s|0); const m=(s/60)|0; return m?m+'m '+(s%60)+'s':s+'s'; };
+function paintProfile(pf){
+  const box=$on('profileCard'); if(!box) return;
+  if(!pf){
+    box.innerHTML='<div class="empty">'+(NET.persistence
+      ? 'No record yet — finish a run and it will show up here.'
+      : 'Records are offline right now; your progress is still saved in this browser.')+'</div>';
+    return;
+  }
+  const t=pf.totals;
+  const best=pf.bests.slice(0,4).map(b=>
+    `<div class="row"><span>${diffOf(b.difficulty).name} · ${MODES[b.partySize]||b.partySize+'p'}</span>`
+    +`<span>wave ${b.wave}${b.won?' ✓':''}${b.fastest?' · '+secs2str(b.fastest):''}</span></div>`).join('');
+  const fav=pf.units.slice(0,3).map(u=>{
+    const D=TOWERS[u.unit]||BOTS[u.unit];
+    const per=u.kills?Math.round(u.spent/u.kills):0;
+    return `<div class="row"><span>${D?D.name:u.unit}</span>`
+      +`<span>${u.kills} kills · ${per?per+'g each':'—'}</span></div>`;
+  }).join('');
+  box.innerHTML=`<div id="roomBox" style="display:block">
+    <div class="rHead"><span class="lbl">Your record</span>
+      <span class="grow" style="flex:1"></span>
+      <span class="pc">${NET.linked?'signed in':'this browser'}</span></div>
+    <div class="row"><span>Runs played</span><span>${t.runsPlayed}</span></div>
+    <div class="row"><span>Runs won</span><span>${t.runsWon}</span></div>
+    <div class="row"><span>Total kills</span><span>${t.totalKills.toLocaleString()}</span></div>
+    <div class="row"><span>Best wave</span><span>${t.bestWave}</span></div>
+    <div class="row"><span>Flyers / bosses</span><span>${t.flyerKills} / ${t.bossKills}</span></div>
+    ${best?'<h3 style="margin-top:8px">Bests</h3>'+best:''}
+    ${fav?'<h3 style="margin-top:8px">Most effective units</h3>'+fav:''}
+  </div>`;
+}
+function paintBoard(m){
+  const box=$on('boardList'); if(!box) return;
+  if(!m.rows){ box.innerHTML='<div class="empty">'+(m.why||'Leaderboards are offline.')+'</div>'; return; }
+  if(!m.rows.length){ box.innerHTML='<div class="empty">Nobody has posted a score here yet — be first.</div>'; return; }
+  box.innerHTML=m.rows.map((r,i)=>
+    `<div class="rItem" style="cursor:default">
+       <span class="rc" style="min-width:2.2em">${i+1}</span>
+       <span class="rn">${escHtml(r.name||'Player')}</span>
+       <span class="rp">${m.kind==='fastest'?secs2str(r.secs):'wave '+r.wave+(r.won?' ✓':'')}</span>
+     </div>`).join('');
+}
+function requestBoard(){
+  netSend({type:'board', difficulty:$on('boardDiff').value,
+           partySize:+$on('boardParty').value, kind:$on('boardKind').value});
+}
+function openRecords(){
+  const sel=$on('boardDiff');
+  if(sel && !sel.options.length)
+    sel.innerHTML=DKEYS.map(k=>`<option value="${k}">${DIFFICULTY[k].name}</option>`).join('');
+  if(sel && !sel.value) sel.value=DIFF;
+  netSend({type:'profile'});
+  requestBoard();
+}
+for(const id of ['boardDiff','boardParty','boardKind'])
+  $on(id).addEventListener('change',requestBoard);
+
 function openOnline(){
   $on('online').classList.remove('hide');
   $on('hostName').value=$on('joinName').value=NET.name||netNameGet();
@@ -4489,6 +4584,7 @@ for(const b of document.querySelectorAll('.onTabs button')){
     for(const x of document.querySelectorAll('.onTabs button')) x.classList.toggle('on',x===b);
     for(const p of document.querySelectorAll('.onPane')) p.classList.toggle('on',p.dataset.p===b.dataset.t);
     if(b.dataset.t==='browse') netSend({type:'list'});
+    if(b.dataset.t==='records') openRecords();
   };
 }
 $on('bOnline').onclick=()=>{ closeLobby(); openOnline(); };

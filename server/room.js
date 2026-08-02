@@ -7,6 +7,7 @@ import { applyIntent, makeRateLimiter, rateOk } from './sim/intents.js';
 import { encodeSnapshot, staticInfo } from './sim/snapshot.js';
 import { kitName, MODES, PCOL, TOWERS, diffOf, DIFFICULTY } from './sim/constants.js';
 import { track } from './analytics.js';
+import { recordRun } from './db.js';
 
 export const TICK_HZ = 30;
 export const SNAP_EVERY = 2;              // broadcast every 2nd tick → 15 Hz
@@ -73,6 +74,7 @@ export class Room {
       if (s.ws && s.ws !== ws) { try { s.ws.close(4001, 'joined elsewhere'); } catch {} }
       s.ws = ws; s.lastSeen = Date.now(); s.name = name || s.name;
       if (unlocked) { s.unlocked = unlocked; if (this.sim) this.sim.setSeatUnlocks(existing, unlocked); }
+      if (ws.ctx && ws.ctx.playerId) s.playerId = ws.ctx.playerId;
       // Clearing this is what stops the GC sweep from collecting a room that
       // emptied once and then filled up again — without it, the *next* drop
       // looks like it has been empty since the first one and kills a live run.
@@ -88,6 +90,7 @@ export class Room {
       token, name: (name || 'Player ' + seat).slice(0, 24),
       ws, lastSeen: Date.now(), rl: makeRateLimiter(),
       unlocked: unlocked || [],
+      playerId: (ws.ctx && ws.ctx.playerId) || null,
     });
     if (this.sim) this.sim.setSeatUnlocks(seat, unlocked);
     this.emptySince = null;
@@ -198,6 +201,7 @@ export class Room {
     if (ran && this.sim.G.over && this.state === 'playing') {
       this.state = 'ended';
       safely(() => track.runEnd(this.run, this.sim, this.sim.G.won ? 'won' : 'lost'));
+      this.persistResults();
       this.pushSnapshot();
     }
   }
@@ -305,6 +309,34 @@ export class Room {
       roster: this.roster(),
       chat: this.chat.slice(-20),
     };
+  }
+
+  /**
+   * Save each seat's result. The wave reached is shared, but kills, gold and
+   * unit performance are personal. Failures are logged and swallowed — a stats
+   * write must never affect a game.
+   */
+  persistResults() {
+    if (!this.sim) return;
+    const G = this.sim.G;
+    for (const [seat, s] of this.seats) {
+      if (!s.playerId) continue;
+      const units = [
+        ...G.towers.filter(t => t.owner === seat)
+          .map(t => ({ kind: t.type, spent: t.spent, kills: t.kills })),
+        ...G.bots.filter(b => b.owner === seat)
+          .map(b => ({ kind: b.kind, spent: b.spent, kills: b.kills })),
+      ];
+      recordRun(s.playerId, {
+        room: this.code, difficulty: this.difficulty, partySize: this.partySize,
+        map: this.sim.map.name, wave: G.wave, won: !!G.won,
+        kills: G.score[seat] || 0, gold: Math.round(G.purse[seat] || 0),
+        seconds: Math.round(G.t),
+        flyerKills: G.quest[seat] ? G.quest[seat].flyerKills : 0,
+        bossKills: G.quest[seat] ? G.quest[seat].bossKills : 0,
+        units,
+      }).catch(err => console.error('[db] recordRun:', err.message));
+    }
   }
 
   /** What the public room browser shows. */

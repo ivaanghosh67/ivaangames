@@ -11,6 +11,10 @@ Environment=HOST=127.0.0.1
 Environment=PORT=8092
 Environment=MAX_ROOMS=200
 Environment=IRONLINE_DATA_DIR=/var/lib/ironline/analytics
+# Database credentials, written by ops/dbsetup and kept out of git. The dash
+# means the service still starts if the file is absent — the game runs without
+# persistence rather than refusing to boot over a stats table.
+EnvironmentFile=-/opt/ironline/.env
 WorkingDirectory=/opt/ironline
 ExecStart=/usr/bin/node /opt/ironline/server.js
 Restart=on-failure

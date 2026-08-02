@@ -17,6 +17,8 @@ import { makeRng, makeRoomCode } from './sim/rng.js';
 import { MAPS, DIFFICULTY, DKEYS } from './sim/constants.js';
 import { staticInfo, encodeSnapshot } from './sim/snapshot.js';
 import analytics, { track } from './analytics.js';
+import { initDb, dbReady, loadPlayer, mergeProgress, recordRun,
+         leaderboard, fastestBoard, profileOf } from './db.js';
 
 const PORT = +(process.env.PORT || 8092);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -136,8 +138,40 @@ function onMessage(ws, msg) {
         const s = ctx.room.seats.get(ctx.seat);
         if (s) { s.name = ctx.name; ctx.room.broadcast(ctx.room.lobbyState()); }
       }
-      return send(ws, { type: 'welcome', token: ctx.token, maps: MAPS.map(m => m.name),
-        difficulties: DKEYS.map(k => ({ key: k, ...DIFFICULTY[k] })) });
+      send(ws, { type: 'welcome', token: ctx.token, maps: MAPS.map(m => m.name),
+        difficulties: DKEYS.map(k => ({ key: k, ...DIFFICULTY[k] })), persistence: dbReady() });
+      // Pull saved progress, merging in whatever this browser holds locally.
+      // Deliberately AFTER the welcome, so a slow database never delays getting
+      // into a game — persistence is a bonus, not a gate.
+      if (dbReady()) {
+        loadPlayer(ctx.token, ctx.name).then(async p => {
+          if (!p) return;
+          ctx.playerId = p.id;
+          const merged = msg.progress ? await mergeProgress(p.id, msg.progress) : p.progress;
+          send(ws, { type: 'progress', progress: merged || p.progress, linked: p.linked });
+        }).catch(() => {});
+      }
+      return;
+    }
+
+    case 'board': {
+      if (!dbReady()) return send(ws, { type: 'board', rows: null, why: 'leaderboards are offline' });
+      const diff = String(msg.difficulty || 'regular').slice(0, 16);
+      const party = Math.max(1, Math.min(4, msg.partySize | 0 || 1));
+      const kind = msg.kind === 'fastest' ? 'fastest' : 'deepest';
+      const fn = kind === 'fastest' ? fastestBoard : leaderboard;
+      fn(diff, party, 20)
+        .then(rows => send(ws, { type:'board', kind, difficulty:diff, partySize:party, rows: rows || [] }))
+        .catch(() => send(ws, { type:'board', kind, rows: [] }));
+      return;
+    }
+
+    case 'profile': {
+      if (!ctx.playerId) return send(ws, { type: 'profile', profile: null });
+      profileOf(ctx.playerId)
+        .then(pf => send(ws, { type: 'profile', profile: pf }))
+        .catch(() => send(ws, { type: 'profile', profile: null }));
+      return;
     }
 
     case 'list':
@@ -316,8 +350,14 @@ setInterval(() => {
   }
 }, 15_000);
 
+// Bring the database up before listening, but never let it stop us: initDb
+// resolves false if it is unconfigured or unreachable and the game runs without
+// persistence.
+await initDb();
+
 server.listen(PORT, HOST, () => {
-  console.log(`[ironline] listening on ${HOST}:${PORT} (ws path /ivaangames/ws)`);
+  console.log(`[ironline] listening on ${HOST}:${PORT} (ws path /ivaangames/ws)` +
+    (dbReady() ? ' with persistence' : ' — no persistence'));
 });
 
 for (const sig of ['SIGINT', 'SIGTERM']) {
