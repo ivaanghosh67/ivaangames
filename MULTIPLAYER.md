@@ -42,27 +42,61 @@ affordable one.
 
 **Everyone gets the full arsenal.** The original sliced it up by seat (P1 guns,
 P2 swords…). Online that mostly meant watching a teammate hold the piece you
-wanted, so every seat can now build, upgrade and sell anything.
+wanted, so every seat can build anything.
 
-**Gold is per player, lives are shared.** Your kills fund your purse. Each purse
-starts at 250 — the solo figure — so one player's economy feels the same whether
-they are alone or in a squad of four. Wave-clear and early-call bonuses pay
-everyone in full rather than being split. Selling refunds the unit's **owner**,
-not whoever clicked sell, so a teammate can clear space for you without
-pocketing your investment. Lives stay shared, because the line is shared.
+**Gold is per player, lives are shared.** Your kills fund your purse — the
+bounty goes to whoever's gun landed the killing shot. Each purse starts at 250,
+the solo figure. Lives stay shared, because the line is shared.
 
-**Everyone walks the map.** Each seat has an avatar that moves with
-arrows/WASD, aims at the cursor, and fires while the mouse is held. Ten carried
-guns, per-seat ammo and reloads. All of it is server-simulated, so what you see
-is what the server scored — no local shots that "should have hit".
+**Your units are yours.** Only the owner can upgrade or sell a unit. This
+followed directly from per-player purses: with separate economies, letting
+anyone sell anything meant spending your gold on someone else's turret and
+cashing out someone else's investment.
+
+**Waves scale with the party.** Each extra player adds 80% more enemies. This is
+the rule that makes co-op work: every player has their own purse, so without it
+a four-player party brings four economies to an unchanged fight. Measured before
+it existed, a solo player had 3.8× spare firepower on wave 1 and a four-player
+party had 18.5×.
+
+Two details matter for the feel:
+
+- Spawn gaps tighten by only the **square root** of the multiplier, so a bigger
+  wave is partly more enemies and partly a longer wave. Scaling both by the full
+  multiplier delivered the wave as one unkillable blob — every party run died by
+  wave 6 in testing.
+- Wave-clear and early-call bonuses pay each player a share matching the threat
+  they carry, rather than paying everyone the full amount.
+
+**Four difficulty tiers.** Recruit / Regular / Veteran / Iron, as multipliers on
+enemy health, enemy count, income and starting lives. The host picks per room.
+
+**The campaign is longer in company.** 50 waves solo, 100 with a partner.
+
+**A boss every wave from 5**, with the first few ramping from 45% health to full
+by wave 12 — wave 5 was the wall that ended almost every measured solo run.
+
+**Quests gate the heavy weapons.** Flak, Laser, Railgun and Plasma are earned
+through play. Progress lives in each player's `localStorage` and is reported to
+the server on join, so the locks are enforced **per seat** — one player's grind
+never arms the room. The host can waive them for a casual game.
+
+> **A feature that came and went.** For a while each seat also had a walking
+> avatar that could move and shoot. It was built, shipped, and then removed at
+> the owner's request — online play is pure tower defence. The soldier still
+> exists in offline solo play, where it always did. The removal is worth knowing
+> about because the netcode still carries its shape: continuous *input state*
+> rather than discrete events was designed for it, and the server-side staleness
+> timeout that stopped abandoned avatars firing forever is the kind of thing
+> worth remembering if it ever comes back.
 
 ## Layout
 
 | Path | What it is |
 |---|---|
 | [iron-line.html](iron-line.html) | The whole client. Still plays offline solo/couch with no server. |
-| [server/sim/constants.js](server/sim/constants.js) | Tower/bot/enemy/carry-gun tables and the wave curve. |
-| [server/sim/sim.js](server/sim/sim.js) | The authoritative simulation, including avatars. |
+| [server/sim/constants.js](server/sim/constants.js) | Tower/bot/enemy tables, wave curve, difficulty tiers, quests. |
+| [server/sim/sim.js](server/sim/sim.js) | The authoritative simulation. |
 | [server/sim/intents.js](server/sim/intents.js) | Every legal player action, each re-validated server-side. |
 | [server/sim/snapshot.js](server/sim/snapshot.js) | Wire encoding. Flat arrays with a fixed stride. |
 | [server/room.js](server/room.js) | One co-op game: seats, host migration, reconnect, broadcast. |
@@ -77,9 +111,10 @@ is what the server scored — no local shots that "should have hit".
 tick (15 Hz). One `setInterval` drives every room, so idle rooms cost nothing.
 
 **Snapshots are flat.** Each entity list is one array with a fixed stride
-(enemies 7, towers 11, bots 14, bullets 5, avatars 8) rather than an array of
-objects — no repeated JSON keys. Positions round to whole pixels, angles
-quantise to a byte. `ws` deflates the rest. Measured: **~8 KB/s per client**.
+(enemies 7, towers 11, bots 14, bullets 5, guards 4, cursors 4) rather than an
+array of objects — no repeated JSON keys. Positions round to whole pixels,
+angles quantise to a byte. `ws` deflates the rest. Measured: **~12 KB/s per
+client**, 48 KB/s for a full four-player room.
 
 **Cosmetics are events, not state.** Particle bursts, floating damage numbers,
 laser beams and sword arcs never appear in a snapshot. The server emits them
@@ -88,11 +123,6 @@ once and each client spawns and expires its own copies.
 **Interpolation.** Clients render between the two most recent snapshots, so
 motion stays smooth at 60 fps off a 15 Hz feed. The blend window tracks the
 *measured* arrival gap, so a jittery connection degrades instead of stuttering.
-
-**Avatar input is state, not events.** Clients send `{a:'input', ang, d, f, s,
-sp, fire}` about 20×/s, and only when it changes (with a 4 Hz heartbeat). The
-server integrates from the last packet it heard, so a dropped packet costs
-nothing and there is no teleporting.
 
 **Reconnects.** Identity is a token in `localStorage`. Drop out and your seat —
 and your towers — are held for 90 seconds. If the host vanishes, the
@@ -105,9 +135,12 @@ Host picks party size, map, and whether to list the game publicly. Joining is by
 5-character code (no vowels, no `0/O/1/I/L`, so it survives being read aloud),
 by shareable link (`/ivaangames/?room=ABCDE`), or from the public browser.
 
-Party size is fixed at start — a seat going quiet must not reshuffle the game.
-Unlocks are per-room and default to everything, since per-computer progression
-would give four players four different arsenals.
+Host also picks the difficulty tier. Party size is fixed at start — a seat going
+quiet must not reshuffle the game.
+
+Quest unlocks are enforced **per seat** from what each client reports on join,
+so players bring their own earned weapons. The host can waive the locks for a
+casual game.
 
 ## What is deliberately not online
 
@@ -143,13 +176,21 @@ is carrying the team.
 cd server && npm install
 npm start                 # :8092, ws path /ivaangames/ws
 
-node test/smoke.js        # 40 end-to-end checks: join, avatars, economy, reconnect
+node test/smoke.js        # end-to-end: join, economy, quests, difficulty, auto, reconnect
 node test/abuse.js        # 16 checks: exploits, floods, malformed input
-node test/deep-sim.js 4   # full 50-wave runs, 1-4 players, invariant checks
+node test/deep-sim.js 4   # full campaigns, 1-4 players, invariant checks
 node test/simulate.js 2   # network-level multi-client sim with invariant checks
 node test/soak.js 75      # bandwidth and tick health
 node --expose-gc test/leak.js   # heap under churn and sustained load
+
+node test/balance.js 1,2,4     # firepower vs threat, per wave
+node test/sweep.js             # search the party-scaling coefficient
+node test/tiers.js             # how deep a reference bot gets per difficulty
 ```
+
+The last three are balance instruments rather than pass/fail tests: they exist
+so difficulty numbers can be re-derived from measurement instead of argued
+about.
 
 Point a local client at a local server with
 `iron-line.html?server=ws://localhost:8092/ivaangames/ws`.
