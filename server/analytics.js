@@ -97,6 +97,7 @@ export const track = {
     A.emit('run_start', {
       run, room: room.code, party: sim.players, map: sim.map.name,
       seed: sim.seed, allUnlocked: room.allUnlocked, public: room.isPublic,
+      difficulty: sim.diffKey, endless: !!sim.endless,
       seats: room.roster().map(r => ({ seat: r.seat, name: r.name, id: anonId(room.seats.get(r.seat)?.token) })),
     });
   },

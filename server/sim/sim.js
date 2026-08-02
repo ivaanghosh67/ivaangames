@@ -20,7 +20,7 @@ import {
   clamp, dist, TOWERS, BOTS, HEALS, ENEMIES, TKEYS, BKEYS,
   hpScale, bossHp, goldScale, armorOf, waveDef, statsOf, botStats,
   kitOf, canUse, upCostOf, healCostOf, PCOL,
-  diffOf, partyScale, bossRamp, ENDLESS_CAP,
+  diffOf, partyScale, bossRamp, ENDLESS_CAP, lateHp,
 } from './constants.js';
 import { makeRng } from './rng.js';
 import { loadMap, pickMap } from './map.js';
@@ -193,7 +193,7 @@ export class Sim {
     // every measured solo run was dying
     const hp = (type === 'ultra' ? bossHp(G.wave) * 4.5
       : type === 'boss' ? bossHp(G.wave) * bossRamp(G.wave)
-      : b.hp * hpScale(G.wave)) * (G.admin.hpMul || 1) * this.diff.hp;
+      : b.hp * hpScale(G.wave)) * (G.admin.hpMul || 1) * this.diff.hp * lateHp(G.wave);
     const p = b.fly ? this.map.airpath : this.map.path;
     G.enemies.push({
       id:this.id(), type, x:p[0].x, y:p[0].y, wp:1, hp, maxhp:hp,

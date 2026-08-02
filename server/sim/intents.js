@@ -8,7 +8,7 @@
 
 import {
   TS, COLS, ROWS, W, H, MAXLVL, MAXLIVES, clamp,
-  TOWERS, BOTS, HEALS, TKEYS, BKEYS, canUse, PCOL,
+  TOWERS, BOTS, HEALS, TKEYS, BKEYS, canUse, PCOL, buildCostOf,
 } from './constants.js';
 
 const isBotUnit = u => !!(u && u.kind);
@@ -69,7 +69,9 @@ export function applyIntent(sim, seat, msg) {
       if (!sim.isUnlocked(k, seat)) return { ok:false, why:'🔒 finish its quest to unlock' };
       const c = msg.c | 0, r = msg.r | 0;
       if (!sim.canBuild(c, r)) return { ok:false, why:'blocked' };
-      const cost = def.cost;
+      // Price rises with how many turrets this player already owns.
+      const owned = G.towers.reduce((n, t) => n + (t.owner === seat ? 1 : 0), 0);
+      const cost = buildCostOf(def, owned);
       if (!sim.spend(seat, cost)) return { ok:false, why:'need ' + cost + 'g' };
       const t = {
         id:sim.id(), type:k, c, r, x:c * TS + TS / 2, y:r * TS + TS / 2,

@@ -11,6 +11,21 @@ import { recordRun } from './db.js';
 
 export const TICK_HZ = 30;
 export const SNAP_EVERY = 2;              // broadcast every 2nd tick → 15 Hz
+
+/**
+ * How often to broadcast, given how much is on the board.
+ *
+ * Late waves now carry several hundred enemies, and at a flat 15 Hz a wave-100
+ * four-player room costs ~115 KB/s per client — fine on broadband, unkind on
+ * mobile data. Clients interpolate against the MEASURED gap between snapshots
+ * rather than an assumed rate, so thinning the stream when the board is busy
+ * costs nothing visually: there is simply more to blend across.
+ */
+function snapEvery(entities) {
+  if (entities > 320) return 4;           // ~7.5 Hz
+  if (entities > 180) return 3;           // ~10 Hz
+  return SNAP_EVERY;                      // 15 Hz
+}
 const DT = 1 / TICK_HZ;
 
 // How long a seat is held for someone who drops, and how long an empty room
@@ -193,7 +208,9 @@ export class Room {
       this.sim.update(DT);
       this.tick++;
       ran = true;
-      if (this.tick % SNAP_EVERY === 0) this.pushSnapshot();
+      const G = this.sim.G;
+      const load = G.enemies.length + G.bullets.length;
+      if (this.tick % snapEvery(load) === 0) this.pushSnapshot();
     }
     // A wave that has stopped being active but has not yet rolled over is a
     // wave that was just cleared — stamp the moment so its duration excludes

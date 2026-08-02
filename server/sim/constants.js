@@ -180,6 +180,23 @@ export const partyScale = players => 1 + PARTY_COEFF * (Math.max(1, players) - 1
 export const bossRamp = n => (n >= 12 ? 1 : 0.45 + 0.55 * Math.max(0, n - 5) / 7);
 
 /**
+ * Late-game escalation.
+ *
+ * Measured on a real run: a full board of 110 level-10 turrets took ZERO leaks
+ * from wave 40 all the way to wave 100. The cause was structural — the per-type
+ * headcounts are clamped (34 grunts, 26 runners, 22 flyers, 16 tanks) and those
+ * clamps bind by about wave 20. After that a wave only ever got tankier, never
+ * bigger, and a maxed board's damage is a fixed ceiling that out-paced the
+ * quadratic health curve indefinitely.
+ *
+ * Two levers, deliberately weighted towards health rather than headcount:
+ * health is free on the wire, whereas every extra body costs snapshot bandwidth
+ * at 15 Hz. The count growth is the smaller number for that reason.
+ */
+export const lateHp = n => 1 + Math.max(0, n - 25) * 0.12;
+export const lateCount = n => 1 + Math.max(0, n - 25) * 0.02;
+
+/**
  * Endless mode: keep going past the final wave instead of winning.
  *
  * The existing curve is quadratic in the wave number, so it escalates on its
@@ -203,7 +220,8 @@ export function waveDef(n, maxWave = MAXWAVE, players = 1, diffKey = 'regular') 
   // lift the per-group ceilings — otherwise a 4-player Iron wave would cap out
   // at exactly the same 34 grunts a solo Recruit wave does.
   const mul = partyScale(players) * D.count;
-  const cap = (x, m) => Math.max(1, Math.min(Math.round(m * mul), Math.round(x * mul)));
+  const late = lateCount(n);            // waves must keep GROWING, not just tanking
+  const cap = (x, m) => Math.max(1, Math.min(Math.round(m * mul * late), Math.round(x * mul * late)));
   // Spawn gaps tighten by only the SQUARE ROOT of the multiplier. Dividing them
   // by the full multiplier keeps the wave the same length while tripling its
   // size, which lands the whole thing as one unkillable blob — measured, that
@@ -261,4 +279,31 @@ export function kitName(pl, players) { return 'Full arsenal'; }
 export const canUse = (pl, k, players) => !!(TOWERS[k] || BOTS[k]);
 
 export const upCostOf = (def, lvl) => Math.round(def.cost * .78 * Math.pow(lvl, 1.25));
-export const healCostOf = (k, bought) => Math.round(HEALS[k].cost * Math.pow(1.08, bought));
+
+/**
+ * What a turret costs, given how many the buyer already owns.
+ *
+ * Flat build costs let a real 2-player run reach 110 turrets by wave 60 and then
+ * flat-line: the map was full, gold piled up past 100,000 with nothing to spend
+ * it on, and 110 maxed turrets out-damaged anything the wave curve could throw.
+ * Sprawl was strictly better than depth, and the late game stopped being a game.
+ *
+ * Now each turret makes the next one dearer, so gold flows into LEVELS instead
+ * of tile count — and levels are where the interesting decisions live, because
+ * damage compounds at 46% each.
+ *
+ * The first `BUILD_FREE` are full price, which leaves the opening exactly as it
+ * was; escalation only bites once you are established. The multiplier is capped
+ * so numbers stay readable rather than becoming astronomical.
+ */
+export const BUILD_FREE = 8;
+export const BUILD_STEP = 1.06;
+export const BUILD_CAP = 40;
+export const buildMul = owned =>
+  Math.min(BUILD_CAP, Math.pow(BUILD_STEP, Math.max(0, owned - BUILD_FREE)));
+export const buildCostOf = (def, owned) => Math.round(def.cost * buildMul(owned));
+// Medical prices climb harder than they used to. At 1.08 a purchase, a rich
+// late-game player simply bought their lives back — one real run regenerated
+// from 13 lives to 45 while ignoring leaks entirely, which removed the only
+// consequence the game has.
+export const healCostOf = (k, bought) => Math.round(HEALS[k].cost * Math.pow(1.18, bought));

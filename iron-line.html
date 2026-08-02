@@ -873,7 +873,15 @@ const canBuild=(c,r)=>c>=0&&c<COLS&&r>=0&&r<ROWS&&!blocked[r][c]&&!towerAt(c,r);
 const isBot=u=>!!(u&&u.kind);
 const defOf=u=>isBot(u)?BOTS[u.kind]:TOWERS[u.type];
 const upCost=u=>Math.round(defOf(u).cost*.78*Math.pow(u.lvl,1.25));
-const healCost=k=>Math.round(HEALS[k].cost*Math.pow(1.08,G.healBuys[k]));
+// Turrets get dearer the more you own, so gold flows into levels rather than
+// tile count. Mirrors the server exactly; the first few are full price.
+const BUILD_FREE=8, BUILD_STEP=1.06, BUILD_CAP=40;
+const buildMul=owned=>Math.min(BUILD_CAP,Math.pow(BUILD_STEP,Math.max(0,owned-BUILD_FREE)));
+const myTowerCount=()=>NET.active
+  ? ((NET.towerCounts||[])[MYSEAT-1]||0)
+  : G.towers.filter(t=>t.owner===MYSEAT).length;
+const buildCost=k=>TOWERS[k]?Math.round(TOWERS[k].cost*buildMul(myTowerCount())):(BOTS[k]?BOTS[k].cost:0);
+const healCost=k=>Math.round(HEALS[k].cost*Math.pow(1.18,G.healBuys[k]));
 
 function statsOf(type,lvl){
   const b=TOWERS[type], k=lvl-1;
@@ -3398,7 +3406,7 @@ function pick(k){
 function buildTower(k,c,r,owner,px,py){
   if(!unlocked(k)){ pop(px,py,'🔒 locked','#e5534b'); return null; }
   if(!canBuild(c,r)){ pop(px,py,'blocked','#e5534b'); return null; }
-  const cost=TOWERS[k].cost;
+  const cost=Math.round(TOWERS[k].cost*buildMul(G.towers.filter(t=>t.owner===owner).length));
   if(!spend(cost)){ pop(px,py,'need '+cost+'g','#e5534b'); return null; }
   const t={type:k,c,r,x:c*TS+TS/2,y:r*TS+TS/2,lvl:1,cd:0,a:-Math.PI/2,
     kills:0,spent:cost,flash:0,spin:0,swingDir:1,ramp:0,owner};
@@ -3474,10 +3482,14 @@ function syncUI(){
   for(const el of [...$('shopGun').children,...$('shopSword').children,...$('shopBot').children]){
     const k=el.dataset.k, d=TOWERS[k]||BOTS[k];
     const lock=TOWERS[k]&&!unlocked(k);
+    const price=buildCost(k);
     el.classList.toggle('sel',G.place===k);
     el.classList.toggle('locked',!!lock);
-    el.classList.toggle('poor',!lock&&G.gold<d.cost);
-    el.querySelector('.pr').textContent = lock ? '🔒 locked' : d.cost+'g';
+    el.classList.toggle('poor',!lock&&G.gold<price);
+    // Show the escalated price, and flag when it is above the base so the
+    // rising cost is visible rather than a surprise at the point of purchase.
+    el.querySelector('.pr').textContent = lock ? '🔒 locked'
+      : price>d.cost ? price+'g ↑' : price+'g';
   }
   for(const el of $('shopHeal').children){
     const c=healCost(el.dataset.k);
@@ -4500,6 +4512,7 @@ function netSnapshot(s){
   G.keep.hit=s.kh?.7:0;
   G.spawnQ.length=s.q;                             // only the count matters to the UI
   if(s.hb){ G.healBuys.bandage=s.hb[0]; G.healBuys.medkit=s.hb[1]; }
+  if(s.tc) NET.towerCounts=s.tc;
 
   // Quest progress. The server sends this run's per-seat totals; we fold the
   // DELTA into our saved figures. The baseline is seeded from the first
