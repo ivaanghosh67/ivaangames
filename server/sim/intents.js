@@ -179,6 +179,11 @@ export function applyIntent(sim, seat, msg) {
     case 'order': {
       const u = sim.unitById(msg.id | 0);
       if (!u || !isBotUnit(u)) return { ok:false, why:'not a bot' };
+      // Your units are yours — the same rule upgrade, sell and target have
+      // enforced all along, and this was the one that got missed. Walking
+      // somebody else's Blade Bot off the chokepoint it was holding is a
+      // worse outcome than spending their gold, because it can lose the run.
+      if (u.owner !== seat) return { ok:false, why:"that's Player " + u.owner + "'s unit" };
       u.rx = clamp(+msg.x || 0, 8, W - 8);
       u.ry = clamp(+msg.y || 0, 8, H - 8);
       sim.ev({ k:'ring', x:Math.round(u.rx), y:Math.round(u.ry), col:PCOL[u.owner] || '#4aa8ff', sz:16 });

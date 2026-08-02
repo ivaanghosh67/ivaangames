@@ -21,7 +21,21 @@ import crypto from 'node:crypto';
 const DATA_DIR = process.env.IRONLINE_DATA_DIR || '/var/lib/ironline/analytics';
 const FLUSH_MS = 4000;
 const MAX_BUFFER = 500;
+// A line cap stops a client writing megabytes into /var/lib — some fields (an
+// action's `k`) come straight off a socket. But it was applied to every event
+// equally, and that silently ate the most valuable record we have: `run_end`
+// carries one entry per turret and bot, so a big board pushes it past 2 KB and
+// the whole line vanishes. Checked against production: every run of 1-6 waves
+// had a run_end; the runs of 37, 39, 84 and 100 waves did not. Months of "how
+// did the long games actually end" was being dropped on the floor, and it read
+// as players abandoning sessions.
+//
+// So the cap is now per event type. Records the server authors itself are
+// bounded by the game's own rules (the turret allowance and the squad limit),
+// and get room to be complete. Anything carrying client text keeps the tight
+// cap, which is what the cap was for.
 const MAX_LINE = 2048;
+const MAX_LINE_FOR = { run_end: 32768, run_start: 8192 };
 
 export const anonId = token =>
   crypto.createHash('sha256').update(String(token || '')).digest('hex').slice(0, 12);
@@ -33,6 +47,7 @@ class Analytics {
     this.day = null;
     this.stream = null;
     this.dropped = 0;
+    this.droppedBy = Object.create(null);
     if (this.enabled) {
       try { fs.mkdirSync(DATA_DIR, { recursive: true }); }
       catch (err) {
@@ -62,22 +77,32 @@ class Analytics {
 
   emit(type, fields) {
     if (!this.enabled) return;
-    if (this.buf.length >= MAX_BUFFER) { this.dropped++; return; }
+    if (this.buf.length >= MAX_BUFFER) { this.drop(type); return; }
     const line = JSON.stringify({ t: Date.now(), e: type, ...fields });
-    // A line cap as well as a count cap. Some fields (an action's `k`) come
-    // straight from a client, and a 64 KB payload repeated at the rate limit
-    // would otherwise write megabytes a second into /var/lib.
-    if (line.length > MAX_LINE) { this.dropped++; return; }
+    if (line.length > (MAX_LINE_FOR[type] || MAX_LINE)) { this.drop(type); return; }
     this.buf.push(line);
   }
 
+  /** Record WHAT was dropped, not just how many. A bare count gave no way to
+   *  notice that one specific event type was being discarded every time. */
+  drop(type) {
+    this.dropped++;
+    this.droppedBy[type] = (this.droppedBy[type] || 0) + 1;
+  }
+
   flush() {
-    if (!this.enabled || !this.buf.length) return;
+    // A pending drop is reason enough to write, even with nothing buffered.
+    // Bailing on an empty buffer meant the drop marker only ever appeared if
+    // some other event happened to be queued at the same moment — so the one
+    // signal that would have revealed run_end going missing was itself
+    // getting swallowed most of the time.
+    if (!this.enabled || (!this.buf.length && !this.dropped)) return;
     const lines = this.buf;
     this.buf = [];
     if (this.dropped) {
-      lines.push(JSON.stringify({ t: Date.now(), e: 'dropped', n: this.dropped }));
+      lines.push(JSON.stringify({ t: Date.now(), e: 'dropped', n: this.dropped, by: this.droppedBy }));
       this.dropped = 0;
+      this.droppedBy = Object.create(null);
     }
     try { this.file(Date.now()).write(lines.join('\n') + '\n'); }
     catch (err) { console.error('[analytics] flush failed:', err.message); }

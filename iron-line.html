@@ -4944,11 +4944,13 @@ function netEvents(list){
       // Your cut of a bounty, not the room's. A kill is split across everyone
       // whose guns hurt it, so showing the total would tell three players in
       // four a number they never received.
-      case 'gold':
-        if(ev.seat!==MYSEAT) break;
-        pop(ev.x,ev.y,(ev.jack?'JACKPOT +':'+')+ev.n,ev.jack?'#ffe066':'#f2c14e');
+      case 'gold': {
+        const mine=(ev.n&&ev.n[MYSEAT-1])||0;
+        if(mine<=0) break;                       // you did not hurt this one
+        pop(ev.x,ev.y,(ev.jack?'JACKPOT +':'+')+mine,ev.jack?'#ffe066':'#f2c14e');
         if(ev.jack) SOUND.gold();
         break;
+      }
       case 'zap':
         G.zaps.push({x1:ev.x1,y1:ev.y1,x2:ev.x2,y2:ev.y2,life:ev.life,col:ev.col,w:ev.w});
         SOUND.shot(ev.w>=3?'railgun':ev.w<=2?'laser':'sniper');

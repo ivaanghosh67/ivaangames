@@ -124,7 +124,12 @@ export class Sim {
       // Cheats are not reachable over the wire; the object exists only so the
       // ported formulas below read identically to the original.
       admin:{ god:false, hpMul:1 },
-      keep:{ kills:0, hit:0, guards:[
+      // owner 0 is "nobody" — the guards are free and their damage is shared
+      // across the room. Declaring both fields here rather than letting them
+      // come back undefined keeps hurt()'s two property loads seeing the same
+      // shape for guards, turrets and bots alike; hurt() is the hottest
+      // function in the sim and it now reads both on every call.
+      keep:{ owner:0, dmgDone:0, kills:0, hit:0, guards:[
         { x:K.cx - 19, y:K.cy - 3, a:Math.PI, cd:0, bob:0, flash:0 },
         { x:K.cx + 19, y:K.cy - 3, a:Math.PI, cd:.4, bob:1.7, flash:0 }] },
       // Where each seat's build cursor sits. Purely cosmetic for other players,
@@ -275,16 +280,17 @@ export class Sim {
     }
     rem.sort((a, b) => b.frac - a.frac);
     for (let i = 0, left = drop - used; i < left && rem.length; i++) out[rem[i % rem.length].s]++;
-    // One event per paid seat, carrying where the kill happened. Events are
-    // broadcast, so each client renders only its own share — showing everybody
-    // the room's total would tell three of four players a number they did not
-    // receive.
+    // ONE event carrying every seat's cut, not one event per seat. Events are
+    // broadcast verbatim to every socket, so per-seat events would have each
+    // client paying for three payloads it throws away — and the cost lands
+    // exactly in the late waves where room.js is already thinning snapshots to
+    // defend the bandwidth budget. Each client reads its own slot instead.
+    const paid = new Array(n);
     for (let s = 1; s <= n; s++) {
-      if (out[s] <= 0) continue;
-      G.purse[s] += out[s];
-      this.ev({ k:'gold', seat:s, n:out[s], x:Math.round(e.x), y:Math.round(e.y - e.r - 4),
-        jack:jack ? 1 : 0 });
+      paid[s - 1] = out[s];
+      if (out[s] > 0) G.purse[s] += out[s];
     }
+    this.ev({ k:'gold', n:paid, x:Math.round(e.x), y:Math.round(e.y - e.r - 4), jack:jack ? 1 : 0 });
     return out;
   }
 
