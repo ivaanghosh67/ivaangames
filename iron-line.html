@@ -122,6 +122,23 @@
   kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;font:inherit;font-size:10px}
   #side::-webkit-scrollbar{width:8px}
   #side::-webkit-scrollbar-thumb{background:#2a3440;border-radius:4px}
+  /* ── settings ── */
+  #settings{position:absolute;top:8px;left:8px;width:250px;max-height:calc(100% - 16px);
+    overflow-y:auto;background:rgba(13,17,23,.97);border:1px solid #3b4a5c;border-radius:10px;
+    padding:10px 11px;z-index:6;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  #settings.hide{display:none}
+  .sHead{display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.1em;color:#9fd8ff;
+    padding-bottom:7px;border-bottom:1px solid var(--line);margin-bottom:8px}
+  .sHead b{flex:1}
+  .sHead button{padding:1px 7px;font-size:11px;line-height:1.3}
+  .sGrp{margin-bottom:10px}
+  .sGrp h5{margin:0 0 5px;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--dim);font-weight:700}
+  .sRow{display:flex;align-items:center;gap:7px;font-size:11.5px;padding:3px 0;cursor:pointer}
+  .sRow input{width:14px;height:14px;accent-color:#4aa8ff;flex:0 0 auto}
+  .sNote{font-size:10px;color:var(--dim);line-height:1.5;margin-bottom:6px}
+  #settings button:not(.sHead button){width:100%;font-size:11px;padding:5px}
+  #sResetQuests{border-color:#5a3a3a;color:#ffb3ae}
   /* ── quests ── */
   .qst{display:flex;flex-direction:column;gap:3px;padding:6px 8px;border-radius:8px;
     background:var(--panel2);border:1px solid var(--line);margin-bottom:5px}
@@ -242,6 +259,31 @@
       <canvas id="gl" width="880" height="600"></canvas>
       <canvas id="cv" width="880" height="600"></canvas>
       <div id="msg"><h1 id="msgT"></h1><p id="msgP"></p><button id="msgB" class="primary">Play again</button></div>
+
+      <div id="settings" class="hide">
+        <div class="sHead"><b>⚙ SETTINGS</b><button id="sClose">✕</button></div>
+        <div class="sGrp"><h5>Display</h5>
+          <label class="sRow"><input type="checkbox" data-s="ranges"> Show every turret's range</label>
+          <label class="sRow"><input type="checkbox" data-s="hpbars" checked> Enemy health bars</label>
+          <label class="sRow"><input type="checkbox" data-s="floaters" checked> Floating gold &amp; damage text</label>
+          <label class="sRow"><input type="checkbox" data-s="shake" checked> Screen shake</label>
+          <label class="sRow"><input type="checkbox" data-s="parts" checked> Particle effects</label>
+          <label class="sRow"><input type="checkbox" data-s="fps"> Show FPS</label>
+        </div>
+        <div class="sGrp" id="sMulti"><h5>Multiplayer</h5>
+          <label class="sRow"><input type="checkbox" data-s="cursors" checked> Teammates' build cursors</label>
+          <label class="sRow"><input type="checkbox" data-s="chat" checked> Chat box on screen</label>
+        </div>
+        <div class="sGrp"><h5>Progress</h5>
+          <div class="sNote" id="sQuestNote"></div>
+          <button id="sResetQuests">Reset quest progress…</button>
+        </div>
+        <div class="sGrp" id="sCheatGrp"><h5>Offline extras</h5>
+          <div class="sNote">First-person view, cheats and the map editor are
+            single-player only — a shared game has to be the same for everyone.</div>
+          <button id="sOpenAdmin">Open cheat panel</button>
+        </div>
+      </div>
 
       <div id="admin" class="hide">
         <div class="aHead"><b>⚙ ADMIN</b><span id="aStats"></span><button id="aClose">✕</button></div>
@@ -2824,7 +2866,7 @@ function drawFPHud(ghostOK){
 function draw(){
   if(FP.on){ draw3D(); return; }
   ctx.save();
-  if(G.shake>0) ctx.translate((Math.random()-.5)*G.shake,(Math.random()-.5)*G.shake);
+  if(G.shake>0&&SET.shake) ctx.translate((Math.random()-.5)*G.shake,(Math.random()-.5)*G.shake);
   ctx.fillStyle='#121a22'; ctx.fillRect(-20,-20,W+40,H+40);
   for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
     if(blocked[r][c]) continue;
@@ -2855,7 +2897,7 @@ function draw(){
         ctx.fillRect(c*TS+2,r*TS+2,TS-4,TS-4); }
     }
   }
-  if(G.admin&&G.admin.ranges){                     // admin: every range at once
+  if(SET.ranges||(G.admin&&G.admin.ranges)){       // every turret's range at once
     ctx.strokeStyle='rgba(255,207,107,.28)'; ctx.lineWidth=1;
     for(const t of G.towers){ ctx.beginPath();
       ctx.arc(t.x,t.y,statsOf(t.type,t.lvl).range,0,TAU); ctx.stroke(); }
@@ -2875,7 +2917,7 @@ function draw(){
   }
 
   drawKeep();
-  drawCursors();
+  if(SET.cursors) drawCursors();
   if(!NET.active&&FP.avatar&&!FP.on) drawAvatar();
   for(const t of G.towers) drawTower(t);
   for(const b of G.bots) drawBot(b);
@@ -2907,7 +2949,7 @@ function draw(){
     else ctx.fillRect(-5,-1.6,10,3.2);
     ctx.restore(); ctx.shadowBlur=0;
   }
-  for(const p of G.parts){
+  if(SET.parts) for(const p of G.parts){
     const a=clamp(p.life/(p.max||.8),0,1); ctx.globalAlpha=a;
     if(p.ring){ ctx.strokeStyle=p.col; ctx.lineWidth=3;
       ctx.beginPath(); ctx.arc(p.x,p.y,p.sz*(1.15-a*.55),0,TAU); ctx.stroke(); }
@@ -2915,7 +2957,7 @@ function draw(){
     ctx.globalAlpha=1;
   }
   ctx.textAlign='center'; ctx.font='bold 13px Segoe UI,sans-serif';
-  for(const t of G.texts){
+  if(SET.floaters) for(const t of G.texts){
     ctx.globalAlpha=clamp(t.life/.95,0,1);
     ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fillText(t.txt,t.x+1,t.y+1);
     ctx.fillStyle=t.col; ctx.fillText(t.txt,t.x,t.y); ctx.globalAlpha=1;
@@ -2965,6 +3007,12 @@ function draw(){
   if(!G.waveActive&&!G.over&&G.wave<WAVECAP){
     ctx.font='600 13px Segoe UI,sans-serif'; ctx.fillStyle='rgba(230,237,243,.55)';
     ctx.fillText('Wave '+(G.wave+1)+' in '+G.prep.toFixed(1)+'s  —  build now, or call it early for bonus gold',W/2,H-16);
+  }
+  if(SET.fps){
+    ctx.textAlign='right'; ctx.font='11px Segoe UI,sans-serif';
+    ctx.fillStyle='rgba(230,237,243,.5)';
+    ctx.fillText(Math.round(fps)+' fps'+(NET.active?('  ·  '+NET.ping+' ms'):''),W-10,14);
+    ctx.textAlign='center';
   }
   ctx.restore();
 }
@@ -3222,6 +3270,7 @@ function drawEnemy(e){
     ctx.beginPath(); ctx.arc(e.x,e.y-(e.fly?5:0),e.r+4,0,TAU); ctx.stroke(); }
   if(e.block){ ctx.strokeStyle='rgba(255,150,90,.55)'; ctx.lineWidth=1.5;
     ctx.beginPath(); ctx.moveTo(e.x,e.y); ctx.lineTo(e.block.x,e.block.y); ctx.stroke(); }
+  if(!SET.hpbars) return;
   const w=Math.max(20,e.r*2.2), f=clamp(e.hp/e.maxhp,0,1), by=e.y-e.r-(e.fly?13:8);
   ctx.fillStyle='rgba(0,0,0,.65)'; ctx.fillRect(e.x-w/2-1,by-1,w+2,5);
   ctx.fillStyle=f>.5?'#6ee7a8':f>.25?'#f2c14e':'#e5534b';
@@ -3310,7 +3359,8 @@ function syncUI(){
   }
   // Online, time is the server's to control and the cheat panel is nobody's.
   // Auto stays live though — it is a legitimate shared setting, not a cheat.
-  for(const b of ['bPause','bSpeed','bFP','bAdmin','bMode','bNet'])
+  // Settings (bAdmin) stays available online — it is display options, not cheats.
+  for(const b of ['bPause','bSpeed','bFP','bMode','bNet'])
     $(b).disabled=NET.active;
   $('bAuto').disabled=NET.active&&G.over;
   $('bMode').textContent=NET.active?(MODES[G.players]+' · P'+MYSEAT):MODES[G.players];
@@ -3517,6 +3567,52 @@ $('msgB').onclick=()=>{
 };
 
 // ───────────────────────────── admin panel (it's your game — cheat freely)
+// ───────────────────────────── settings
+// Display and quality-of-life only — nothing here changes the simulation, so it
+// is safe to leave available in a shared game. Cheats stay behind the offline
+// admin panel.
+const SETKEY='ironline.settings';
+const SET={ranges:false,hpbars:true,floaters:true,shake:true,parts:true,fps:false,
+           cursors:true,chat:true};
+try{ const s=JSON.parse(localStorage.getItem(SETKEY)||'{}');
+     for(const k in SET) if(typeof s[k]==='boolean') SET[k]=s[k]; }catch(_){}
+function saveSettings(){ try{ localStorage.setItem(SETKEY,JSON.stringify(SET)); }catch(_){} }
+
+let settingsOpen=false;
+function toggleSettings(on){
+  settingsOpen = on===undefined ? !settingsOpen : on;
+  if(settingsOpen) toggleAdmin(false);              // the two panels share a corner
+  $('settings').classList.toggle('hide',!settingsOpen);
+  $('bAdmin').classList.toggle('on',settingsOpen);
+  if(settingsOpen) paintSettings();
+}
+function paintSettings(){
+  for(const el of document.querySelectorAll('#settings input[data-s]'))
+    el.checked=!!SET[el.dataset.s];
+  // multiplayer-only rows, and cheats only when there is nobody else to spoil
+  $('sMulti').style.display=NET.active?'':'none';
+  $('sCheatGrp').style.display=NET.active?'none':'';
+  const done=QUESTS.filter(questDone).length;
+  $('sQuestNote').textContent=done+' of '+QUESTS.length+' weapons unlocked · '
+    +(QP.flyerKills||0)+' flyers, '+(QP.bossKills||0)+' bosses, best wave '+(QP.bestWave||0);
+}
+for(const el of document.querySelectorAll('#settings input[data-s]')){
+  el.addEventListener('change',()=>{
+    SET[el.dataset.s]=el.checked; saveSettings();
+    if(el.dataset.s==='chat') $('mpChat').classList.toggle('on',NET.active&&SET.chat);
+  });
+}
+$('sClose').onclick=()=>toggleSettings(false);
+$('sOpenAdmin').onclick=()=>{ toggleSettings(false); toggleAdmin(true); };
+$('sResetQuests').onclick=()=>{
+  if(!confirm('Reset all quest progress?\n\nThis clears your flyer and boss counts,\n'
+             +'your best wave, and re-locks Flak, Laser, Railgun and Plasma.')) return;
+  QP={flyerKills:0,bossKills:0,bestWave:0}; saveQuests();
+  UNLOCKED.clear(); saveUnlocks();
+  paintQuests(); paintSettings(); syncUI();
+  pop(W/2,140,'quest progress reset','#8b98a5');
+};
+
 let adminOpen=false;
 function toggleAdmin(on){
   adminOpen = on===undefined ? !adminOpen : on;
@@ -3632,7 +3728,7 @@ const ADMIN={
 for(const btn of document.querySelectorAll('#admin [data-a]')){
   btn.onclick=()=>{ const fn=ADMIN[btn.dataset.a]; if(fn) fn(); paintAdmin(); syncUI(); };
 }
-$('bAdmin').onclick=()=>toggleAdmin();
+$('bAdmin').onclick=()=>toggleSettings();
 $('bFP').onclick=()=>{ FP.on?exitFP():enterFP(); };
 $('aClose').onclick=()=>toggleAdmin(false);
 
@@ -3763,9 +3859,11 @@ addEventListener('keydown',ev=>{
     // player rewrite a shared game), first person (this is the top-down co-op),
     // and seats 2-4's keyboard controls (everyone is on their own machine).
     if(k==='t'){ ev.preventDefault(); $on('mpChat').classList.add('on'); $on('mpSay').focus(); return; }
-    if(k==='`'||k==='~'||ev.key==='F2'||k==='v') { ev.preventDefault(); return; }
+    // ` still opens SETTINGS online; it just cannot reach the cheat panel.
+    if(k==='`'||k==='~'||ev.key==='F2'){ ev.preventDefault(); toggleSettings(); return; }
+    if(k==='v'){ ev.preventDefault(); return; }
   } else {
-    if(k==='`'||k==='~'||ev.key==='F2'){ ev.preventDefault(); toggleAdmin(); return; }
+    if(k==='`'||k==='~'||ev.key==='F2'){ ev.preventDefault(); toggleSettings(); return; }
     if(k==='v'&&G.players===1){ ev.preventDefault(); FP.on?exitFP():enterFP(); return; }
   }
   if(lobbyOpen){
@@ -4290,12 +4388,12 @@ function netChat(line){
   NET.chat.push(line);
   if(NET.chat.length>50) NET.chat.shift();
   paintChat();
-  if(NET.active) $on('mpChat').classList.add('on');
+  if(NET.active&&SET.chat) $on('mpChat').classList.add('on');
 }
 function paintMpBar(){
   const bar=$on('mpBar');
   bar.classList.toggle('on',NET.active&&PLAYERS>1);
-  $on('mpChat').classList.toggle('on',NET.active);
+  $on('mpChat').classList.toggle('on',NET.active&&SET.chat);
   if(!NET.active) return;
   bar.innerHTML='';
   for(let s=1;s<=PLAYERS;s++){
