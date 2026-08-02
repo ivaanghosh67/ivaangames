@@ -365,16 +365,31 @@ server.listen(PORT, HOST, () => {
 for (const sig of ['SIGINT', 'SIGTERM']) {
   process.on(sig, () => {
     console.log(`[ironline] ${sig}, shutting down`);
+    const live = [];
     for (const room of rooms.values()) {
       // Record runs that were still in progress, or a deploy silently loses
       // every game that happened to be live at the time.
       if (room.sim && room.state === 'playing') {
         try { track.runEnd(room.run, room.sim, 'interrupted'); } catch {}
+        // ...and SAVE them. Analytics is a log; `bests` is the player's actual
+        // progress, and it was only ever written when a run reached its own
+        // ending. A deploy took a real game down at wave 46 while the player's
+        // saved best still read 37, so nine waves of their evening simply did
+        // not happen as far as the game was concerned. A restart is not the
+        // player's fault and must not cost them their record.
+        try { room.persistResults(); } catch (err) {
+          console.error('[ironline] persist on shutdown:', err.message);
+        }
+        live.push(`${room.code} wave ${room.sim.G.wave}`);
       }
       room.broadcast({ type: 'error', why: 'server restarting' });
     }
+    if (live.length) console.log(`[ironline] saved ${live.length} live run(s): ${live.join(', ')}`);
     analytics.close();
     wss.close(); server.close(() => process.exit(0));
+    // Long enough for the persist writes above to land before the process
+    // goes. They are fire-and-forget promises, so exiting immediately would
+    // throw away the very thing this block exists to save.
     setTimeout(() => process.exit(0), 3000).unref();
   });
 }

@@ -128,6 +128,9 @@ export function encodeSnapshot(sim, tick) {
     // Build permits bought per seat. The allowance and the next permit's price
     // both depend on it, so the client cannot show either without it.
     pm: [G.permits[1], G.permits[2], G.permits[3], G.permits[4]],
+    // Smart Upgrade, per seat. Everyone sees who has it on — a teammate's
+    // levels climbing on their own is otherwise inexplicable.
+    sm: [G.smart[1] ? 1 : 0, G.smart[2] ? 1 : 0, G.smart[3] ? 1 : 0, G.smart[4] ? 1 : 0],
     // Per-seat quest progress for this run: [flyerKills, bossKills] × 4.
     // Clients add the delta to their saved totals and unlock accordingly.
     qp: [1, 2, 3, 4].flatMap(s => [G.quest[s].flyerKills, G.quest[s].bossKills]),

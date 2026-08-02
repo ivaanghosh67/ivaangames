@@ -26,7 +26,7 @@ open it. The whole single-player game is in that one file.
 - [The board](#the-board) · [Lives](#lives) · [Gold](#gold)
 - [Difficulty](#difficulty) · [Waves](#waves) · [Enemies](#enemies)
 - [Towers](#towers) · [Bots](#bots) · [Medical](#medical)
-- [Upgrading and selling](#upgrading-and-selling) · [The turret allowance](#the-turret-allowance)
+- [Upgrading and selling](#upgrading-and-selling) · [Smart Upgrade](#-smart-upgrade) · [The turret allowance](#the-turret-allowance)
 - [How to get better](#how-to-get-better) · [What unlocks when](#what-unlocks-when)
 - [Quests](#quests-unlocking-the-heavy-weapons)
 - [Multiplayer rules](#multiplayer-rules)
@@ -55,6 +55,9 @@ open it. The whole single-player game is in that one file.
   thumbnails that draw each map's actual road
 - **A turret allowance per player**, so you win by upgrading rather than sprawling
   — with **Build Permits** to turn a late-game fortune back into board space
+- **🧠 Smart Upgrade** — an optimiser that spends your gold on whichever upgrade
+  buys the most, weighing road covered, the next wave's air/ground mix, armour,
+  and how much damage each of your units is *actually* dealing
 - **Plays on phones and tablets** — drag to aim, lift to place, with the board
   pinned above the shop
 - **Reconnect protection** — drop out and your seat and everything you built are
@@ -125,6 +128,7 @@ host clicks **Start the run**.
 | Cancel a selection | `Esc` or right-click |
 | Chat (online) | `T` |
 | Pause / speed *(offline only)* | `Space` or `P` / the `1×` button |
+| Smart Upgrade on/off | the **🧠 Smart Upgrade** button |
 
 Couch co-op gives players 2–4 their own keyboard cluster and their own on-screen
 cursor — the layouts are listed in the party lobby.
@@ -434,6 +438,62 @@ Everything can be upgraded to **level 10**.
 
 **Selling** returns **60% of everything you have put into a unit**, purchase
 price plus every upgrade. Recalling a bot works the same way.
+
+---
+
+## 🧠 Smart Upgrade
+
+A toggle in the top bar. While it is on, your gold is spent automatically on
+whichever upgrade is worth the most at that moment — roughly three times a
+second, per player, out of your own purse and onto your own units.
+
+### What it optimises
+
+Marginal value per gold. For every unit you own it evaluates what one more
+level would add, divides by what that level costs, and buys the maximum. Never
+absolute value, which would pour everything into whatever is already strongest.
+
+A turret's value is modelled as the damage it expects to land on one enemy
+walking past:
+
+```
+value = effective damage per second  ×  length of road it covers
+```
+
+Time-in-range is proportional to road covered, which is why the same sniper is
+worth several times more on a hairpin than on a straight. The terms:
+
+| Input | Effect |
+|---|---|
+| **Road covered** | Sampled every 10 px along the path. A turret nothing walks past scores zero and will never be upgraded. |
+| **Ground vs air** | Ground enemies follow the road, flyers cut across it, so each is measured against its own path and weighted by what the **next wave** actually sends — by enemy *health*, not headcount, so one boss counts for more than a dozen runners. |
+| **Armour** | Subtracted from every non-piercing hit, which quietly guts fast low-damage guns late. Piercing weapons ignore it. |
+| **Splash, pierce, line, melee** | Fold into an effective target count — splash `1 + radius/50`, a railgun line ×4, a sweeping sword ×3. |
+| **Spin-up** | A Gatling is discounted 25% for the shots it spends winding up. |
+| **Measured performance** | Blended in at half weight: how much damage that exact unit has really dealt per gold sunk into it, this run. |
+
+Bots are valued by their actual job — a Medic by what it keeps alive and how
+many bots there are to patch, a Gun Crew by 35% of whatever turrets are standing
+in range of it, a Blade Bot by the *time* its health buys against the wave's
+melee damage.
+
+### Why there is no neural network in here
+
+Because it would be worse. "Which of my ~18 units takes the next upgrade" has a
+well-defined objective, inputs the simulation already knows exactly, and a
+search space small enough to evaluate exhaustively many times a second. A
+learned model would be approximating a function we can simply compute — slower,
+less accurate, and impossible to explain to a ten-year-old.
+
+What it *does* do is learn in the sense that matters: the measured-performance
+term is a feedback loop over the damage each unit is actually dealing. Theory
+knows a turret's range and rate; only the measurement knows you tucked it behind
+the keep. That correction is only possible because every unit now banks the
+damage it deals — the same ledger the [gold split](#gold) runs on.
+
+It is deliberately paced rather than run every tick: at 30 Hz it would empty a
+purse the instant gold landed, which makes the gold counter unreadable and takes
+the decision away from a player saving for a permit.
 
 ---
 

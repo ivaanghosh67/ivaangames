@@ -24,6 +24,10 @@ import {
 } from './constants.js';
 import { makeRng } from './rng.js';
 import { loadMap, pickMap } from './map.js';
+import { bestUpgrade } from './smart.js';
+
+// How often Smart Upgrade may buy. See runSmart().
+const SMART_EVERY = 0.35;
 
 const isBotUnit = u => !!(u && u.kind);
 const defOf = u => (isBotUnit(u) ? BOTS[u.kind] : TOWERS[u.type]);
@@ -115,6 +119,9 @@ export class Sim {
       // the same whether they are alone or in a squad of four.
       purse:{ 1:250, 2:250, 3:250, 4:250 },
       wave:0, autoWave:false, towers:[], bots:[], enemies:[], bullets:[],
+      // Smart Upgrade is PER SEAT — unlike auto-wave, which changes the run for
+      // everyone, this one spends your own gold on your own units.
+      smart:{ 1:false, 2:false, 3:false, 4:false }, smartT:0,
       spawnQ:[], spawnT:0, spawning:false, prep:15, waveActive:false,
       over:false, won:false, t:0, shake:0,
       healBuys:{ bandage:0, medkit:0 }, leaked:0, killed:0,
@@ -440,6 +447,32 @@ export class Sim {
     }
   }
 
+  /**
+   * Smart Upgrade: buy the best-value upgrade for any seat that asked for it.
+   *
+   * Paced rather than run every tick. At 30 Hz an unpaced version would empty
+   * a purse the instant gold landed, which makes the gold counter unreadable
+   * and takes the decision away from a player who wanted to save for a permit.
+   * A few a second is fast enough to feel automatic and slow enough to watch.
+   */
+  runSmart(dt) {
+    const G = this.G;
+    G.smartT -= dt;
+    if (G.smartT > 0) return;
+    G.smartT = SMART_EVERY;
+    for (let seat = 1; seat <= this.players; seat++) {
+      if (!G.smart[seat]) continue;
+      const u = bestUpgrade(this, seat);
+      if (!u) continue;
+      const cost = this.upCost(u);
+      if (!this.spend(seat, cost)) continue;
+      u.lvl++; u.spent += cost;
+      if (isBotUnit(u) && !u.dead) u.hp = botStats(u.kind, u.lvl).hp;
+      this.burst(u.x, u.y, '#9fd8ff', 10, 90);
+      this.pop(u.x, u.y - 20, 'LVL ' + u.lvl, '#9fd8ff');
+    }
+  }
+
   // ── per-tick ────────────────────────────────────────────────────────────
   update(dt) {
     const G = this.G;
@@ -460,6 +493,8 @@ export class Sim {
       while (G.spawnQ.length && G.spawnQ[0].at <= G.spawnT) this.spawn(G.spawnQ.shift().type);
       if (!G.spawnQ.length) G.spawning = false;
     }
+
+    this.runSmart(dt);
 
     for (const e of G.enemies) e.block = null;
     this.updateBots(dt);

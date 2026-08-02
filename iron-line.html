@@ -311,6 +311,7 @@
       <button id="bAdmin" title="Admin panel (~)">⚙</button>
       <button id="bFP" title="First-person view (V)">👁 1st person</button>
       <button id="bAuto" title="Auto-skip the countdown between waves">⏭ Auto</button>
+      <button id="bSmart" title="Smart Upgrade — spend your gold on whichever upgrade is worth the most right now">🧠 Smart Upgrade</button>
       <button id="bWave" class="primary">Start Wave</button>
       <button id="bPause">Pause</button>
       <button id="bSpeed">1×</button>
@@ -924,6 +925,7 @@ function newGame(){
       waveActive:false, over:false, won:false, sel:null, place:null, paused:false,
       speed:1, slowmo:false, shake:0, t:0, healBuys:{bandage:0,medkit:0}, leaked:0, killed:0,
       permits:{1:0,2:0,3:0,4:0},   // extra turret slots bought, per seat
+      smart:{1:false,2:false,3:false,4:false}, smartT:0,   // Smart Upgrade, per seat
       players:PLAYERS, score:{1:0,2:0,3:0,4:0},
       admin:{free:false,god:false,ranges:false,hpMul:1,squadBonus:0,infAmmo:false,noKick:false,gunMul:1,magMul:1,refill:false,instaload:false,flyMul:1,ceiling:430,hover:false,airJumps:2},
       chests:[], map:MAPNAME, ultraWarned:false,
@@ -1107,6 +1109,8 @@ function update(dt){
     while(G.spawnQ.length&&G.spawnQ[0].at<=G.spawnT) spawn(G.spawnQ.shift().type);
     if(!G.spawnQ.length) G.spawning=false;
   }
+
+  runSmart(dt);
 
   for(const e of G.enemies) e.block=null;
   updateBots(dt);
@@ -3507,6 +3511,141 @@ const PERMIT_DEF={name:'Build Permit',glyph:'📜',color:'#9fd8ff',
 const permitCard=makeCard($('shopHeal'),'permit',PERMIT_DEF,PERMIT_BASE,()=>buyPermit());
 $('maxL').textContent=MAXLIVES;
 
+// ───────────────────────────── Smart Upgrade
+// An optimiser, not a neural network — and deliberately so. "Which of my
+// units should take the next upgrade" has a well-defined objective, inputs the
+// simulation already knows exactly, and a search space small enough to
+// evaluate exhaustively several times a second. A learned model would be
+// approximating something we can just compute.
+//
+// It does learn in the way that matters here: it measures what each unit is
+// ACTUALLY delivering this run (damage per gold sunk in) and corrects its own
+// estimate with that. Theory knows a turret's range and rate; only the
+// measurement knows you tucked it behind the keep where nothing walks past.
+//
+// A turret's worth is the damage it lands on one passing enemy:
+//     value = effective dps × time the enemy spends inside its range
+// and time-in-range is proportional to the LENGTH OF ROAD it covers, which is
+// why the same sniper is worth several times more on a hairpin than on a
+// straight. Ground enemies follow the road and flyers cut across it, so each is
+// measured against its own path and weighted by what the next wave sends.
+// MUST match server/sim/smart.js.
+const SMART_EVERY=0.35;
+const COVER_STEP=10;                   // px between samples along a path
+function roadCovered(pts,x,y,range){
+  let len=0;
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1],b=pts[i];
+    const dx=b.x-a.x, dy=b.y-a.y, seg=Math.hypot(dx,dy);
+    if(seg<=0) continue;
+    // Sample by DISTANCE, not by vertex. One midpoint per stored segment works
+    // for the road, which is finely sampled, but the flight path is two points
+    // — one off each edge of the map — so a single test credited a turret
+    // either the whole 960px crossing or nothing, purely on whether it sat
+    // near the middle. MUST match server/sim/smart.js.
+    const n=Math.max(1,Math.ceil(seg/COVER_STEP)), dl=seg/n;
+    for(let k=0;k<n;k++){
+      const t=(k+0.5)/n;
+      if(dist(x,y,a.x+dx*t,a.y+dy*t)<=range) len+=dl;
+    }
+  }
+  return len;
+}
+function threatMix(){
+  const next=Math.min(WAVECAP,G.wave+(G.waveActive?0:1));
+  const w=waveDef(Math.max(1,next),WAVECAP,G.players,DIFF);
+  let air=0,ground=0;
+  for(const g of w){
+    const e=ENEMIES[g.t]; if(!e) continue;
+    // weighted by health, not headcount — one boss is more of the wave's
+    // substance than a dozen runners, and it is what you need damage for
+    const bulk=g.c*e.hp;
+    if(e.fly) air+=bulk; else ground+=bulk;
+  }
+  const tot=air+ground;
+  return {air:tot>0?air/tot:0, ground:tot>0?ground/tot:1, armor:armorOf(0,Math.max(1,next))};
+}
+function towerValue(t,lvl,mix){
+  const D=TOWERS[t.type]; if(!D) return 0;
+  const s=statsOf(t.type,lvl);
+  // Armour is flat reduction per hit, so it punishes many small hits far more
+  // than a few big ones — most of why a Sniper outlasts a Gatling.
+  const perHit=D.pierce?s.dmg:Math.max(1,s.dmg-mix.armor);
+  let targets=D.multi||1;
+  if(s.splash>0) targets*=1+s.splash/50;
+  if(D.line) targets*=4;
+  if(D.melee) targets*=3;
+  let dps=perHit*s.rate*targets;
+  if(D.spinup) dps*=0.75;
+  if(s.slow) dps*=1+s.slow;
+  const gCov=D.noGround?0:roadCovered(PATH,t.x,t.y,s.range);
+  const aCov=D.air?roadCovered(AIRPATH,t.x,t.y,s.range):0;
+  return dps*(mix.ground*gCov+mix.air*aCov)/100;
+}
+function botValue(b,lvl,mix){
+  const D=BOTS[b.kind]; if(!D) return 0;
+  const s=botStats(b.kind,lvl);
+  if(D.heal>0){
+    const mates=G.bots.filter(o=>o!==b).length;
+    return s.heal*s.rate*Math.min(4,mates)*0.8;
+  }
+  if(D.crew){
+    let near=0;
+    for(const t of G.towers) if(dist(b.x,b.y,t.x,t.y)<=s.range) near+=towerValue(t,t.lvl,mix);
+    return near*(D.buff||0.35);
+  }
+  const perHit=Math.max(1,s.dmg-(D.air?0:mix.armor));
+  let v=perHit*s.rate*(D.air?1:mix.ground);
+  if(D.block){
+    // what a blocker is really worth is the time it buys, and that is its
+    // health over how hard the wave hits back
+    const incoming=Math.max(1,ENEMIES.boss.dps*(G.wave>10?1:0.4));
+    v+=s.hp/incoming*12;
+  }
+  return v;
+}
+function bestUpgrade(){
+  // Offline the purse is shared, so every unit on the board is a candidate.
+  const mine=[...G.towers,...G.bots].filter(u=>u.lvl<MAXLVL);
+  if(!mine.length||G.gold<=0) return null;
+  const mix=threatMix();
+  let effSum=0,effN=0; const eff=new Map();
+  for(const u of mine){
+    const e=(u.dmgDone||0)/Math.max(1,u.spent);
+    eff.set(u,e);
+    if(u.dmgDone>0){ effSum+=e; effN++; }
+  }
+  const effAvg=effN>0?effSum/effN:0;
+  let best=null,bestScore=0;
+  for(const u of mine){
+    const cost=upCost(u);
+    if(cost>G.gold) continue;
+    const isB=isBot(u);
+    const gain=(isB?botValue(u,u.lvl+1,mix):towerValue(u,u.lvl+1,mix))
+              -(isB?botValue(u,u.lvl,mix):towerValue(u,u.lvl,mix));
+    if(!(gain>0)) continue;
+    let score=gain/cost;
+    if(effAvg>0) score*=0.5+0.5*Math.min(2,(eff.get(u)||0)/effAvg);
+    if(score>bestScore){ bestScore=score; best=u; }
+  }
+  return best;
+}
+function runSmart(dt){
+  if(!SMART||G.over) return;
+  G.smartT=(G.smartT||0)-dt;
+  if(G.smartT>0) return;
+  G.smartT=SMART_EVERY;
+  const u=bestUpgrade();
+  if(!u) return;
+  const cost=upCost(u);
+  if(!spend(cost)) return;
+  u.lvl++; u.spent+=cost;
+  if(isBot(u)&&!u.dead) u.hp=botStats(u.kind,u.lvl).hp;
+  burst(u.x,u.y,'#9fd8ff',10,90);
+  pop(u.x,u.y-20,'LVL '+u.lvl,'#9fd8ff');
+  syncUI();
+}
+
 function pick(k){
   if(G.over) return;
   if(TOWERS[k]&&!unlocked(k)){ pop(W/2,150,'🔒 win a run to unlock '+TOWERS[k].name,'#8b98a5'); return; }
@@ -3596,6 +3735,7 @@ function syncUI(){
   for(const b of ['bPause','bSpeed','bFP','bMode','bNet'])
     $(b).disabled=NET.active;
   $('bAuto').disabled=NET.active&&G.over;
+  $('bSmart').disabled=G.over;
   $('bMode').textContent=NET.active?(MODES[G.players]+' · P'+MYSEAT):MODES[G.players];
   $('bMode').style.color=NET.active?PCOL[MYSEAT]:'';
   $('bFP').title=G.players>1
@@ -4388,6 +4528,22 @@ $('bAuto').onclick=()=>{
   AUTOSKIP=!AUTOSKIP; paintAuto(); syncUI();
 };
 
+// Smart Upgrade is PER PLAYER, unlike auto-wave — it spends your gold on your
+// units, so it is yours to switch on and nobody else's to switch off.
+let SMART=false;
+function paintSmart(){
+  $('bSmart').classList.toggle('on',SMART);
+  $('bSmart').textContent=SMART?'🧠 Smart Upgrade ON':'🧠 Smart Upgrade';
+  $('bSmart').title=SMART
+    ? 'Spending your gold on the best upgrade available — click to stop'
+    : 'Spend your gold automatically on whichever upgrade is worth the most right now';
+}
+$('bSmart').onclick=()=>{
+  if(NET.active){ intent({a:'smart',on:!SMART}); return; }
+  SMART=!SMART; paintSmart(); syncUI();
+};
+paintSmart();
+
 let lobbyMode=1, lobbyOpen=false, lobbyMap=-1;   // random by default   // boot straight into the game; the party picker is a click away
 const KEYLABEL={2:['W A S D','F','R','G','V','C'],3:['I J K L','H','Y','N','O','P'],
                 4:['↑ ← ↓ →','.',',','/',"'",';']};
@@ -4698,7 +4854,7 @@ function netHandle(m){
       const roomGone=/no room with that code|server restarting/i.test(m.why||'');
       if(roomGone){
         NET.active=false; NET.room=null; NET.seat=0; NET.info=null;
-        MYSEAT=1; PLAYERS=1; WAVECAP=MAXWAVE; AUTOSKIP=false; paintAuto();
+        MYSEAT=1; PLAYERS=1; WAVECAP=MAXWAVE; AUTOSKIP=false; paintAuto(); SMART=false; paintSmart();
         paintMpBar(); paintRoom(null); paintNetStatus();
         $on('online').classList.remove('hide');
         showMsg(false);
@@ -4717,6 +4873,7 @@ function netStart(info){
   NET.selId=0; NET.prevAt=0; NET.curAt=0; NET.outcome=null; NET.qpSeen=null;
   AUTOMAP=false;                                   // the server picked the map
   AUTOSKIP=false; paintAuto();                     // the room starts with auto off
+  SMART=false; paintSmart();                       // and Smart Upgrade off for you
   PLAYERS=info.players; MYSEAT=NET.seat||1;
   if(info.unlocked===null) NET.allUnlocked=true;
   else { NET.allUnlocked=false; NET.unlockedSet=new Set(info.unlocked); }
@@ -4768,6 +4925,11 @@ function netSnapshot(s){
   if(s.hb){ G.healBuys.bandage=s.hb[0]; G.healBuys.medkit=s.hb[1]; }
   if(s.tc) NET.towerCounts=s.tc;
   if(s.pm) G.permits={1:s.pm[0],2:s.pm[1],3:s.pm[2],4:s.pm[3]};
+  if(s.sm){
+    G.smart={1:!!s.sm[0],2:!!s.sm[1],3:!!s.sm[2],4:!!s.sm[3]};
+    const on=!!s.sm[MYSEAT-1];
+    if(on!==SMART){ SMART=on; paintSmart(); }
+  }
 
   // Quest progress. The server sends this run's per-seat totals; we fold the
   // DELTA into our saved figures. The baseline is seeded from the first
@@ -5293,6 +5455,8 @@ window.__T={unlockSecret,gunList,rayPierce,CKEYS,WAY:()=>WAY,PATH:()=>PATH,loadM
   towerCapOf,towerCap,permitCost,permitCostOf,buyPermit,meleeScale}; Object.defineProperty(window,'__fps',{get:()=>fps});
 window.__mouseX=()=>mouse.x; window.__mouseY=()=>mouse.y;
 window.__netEvents=netEvents; window.__seat=()=>MYSEAT;
+window.__smart={runSmart,bestUpgrade,towerValue,botValue,threatMix,roadCovered,
+  PATH:()=>PATH,AIRPATH:()=>AIRPATH,on:()=>SMART};
 })();
 </script>
 </body>

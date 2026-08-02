@@ -201,6 +201,15 @@ export function applyIntent(sim, seat, msg) {
       return { ok:true, changed:true };
     }
 
+    case 'smart': {
+      // Per seat, not per room: it spends your gold on your units, so it is
+      // yours to switch on and nobody else's to switch off.
+      const on = !!msg.on;
+      if (G.smart[seat] === on) return { ok:true, changed:false };
+      G.smart[seat] = on;
+      return { ok:true, changed:true };
+    }
+
     case 'wave': {
       // Anyone may call the next wave in early — it is a shared decision and
       // the couch game lets whoever reaches Enter first do it.

@@ -138,6 +138,34 @@ twice the last, so it is a way to spend a fortune, not a way around the limit.
 
 ---
 
+## 🧠 Smart Upgrade
+
+Click **🧠 Smart Upgrade** in the top bar and the game spends your gold for you,
+always on whichever upgrade is worth the most right now. Click it again to stop.
+
+It is genuinely thinking, not picking at random. For every gun and robot you
+own it works out how much better one more level would make it, divides that by
+what the level costs, and buys the winner. Three things it takes into account:
+
+- **How much road your gun covers.** A gun watching a long stretch of road
+  shoots each enemy many more times than one watching a corner of the map, so it
+  gets upgraded first. A gun sitting somewhere nothing walks past is worth
+  nothing, and it will not waste your gold on one.
+- **What is coming next.** If the next wave is mostly flyers it stops feeding
+  guns that cannot shoot up, and vice versa.
+- **What is actually working.** It watches how much damage each of your guns has
+  really done this game, and backs the ones doing the work. This is the part
+  that catches mistakes — theory says a gun is well placed, but only the damage
+  counter knows the truth.
+
+**It is yours alone.** It spends your gold on your guns. Your friend turning it
+on does nothing to your side, and it never touches their guns.
+
+**A word of warning:** it will happily spend everything you have. If you are
+saving up for a Build Permit or a Medkit, turn it off first.
+
+---
+
 ## Five tips that actually help
 
 **1. Upgrade instead of building more.**
