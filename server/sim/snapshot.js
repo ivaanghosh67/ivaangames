@@ -142,7 +142,9 @@ export function staticInfo(sim, room) {
     // MAXWAVE is per-run (50 solo, 100 in a party), so it travels with the run
     // rather than being a client constant.
     difficulty: { key: sim.diffKey, ...diffOf(sim.diffKey) },
-    consts: { MAXWAVE: sim.maxWave, MAXLIVES, MAXLVL, maxSquads: sim.maxSquads() },
+    endless: !!sim.endless,
+    consts: { MAXWAVE: sim.maxWave, CAMPAIGN: sim.campaignWave,
+              MAXLIVES, MAXLVL, maxSquads: sim.maxSquads() },
     defs: { TOWERS, BOTS, HEALS, ENEMIES, TKEYS, BKEYS, EKEYS, QUESTS, DIFFICULTY },
     room: room ? { code: room.code, name: room.name, isPublic: room.isPublic } : null,
   };

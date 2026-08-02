@@ -21,7 +21,7 @@ const EMPTY_ROOM_TTL_MS = 120_000;
 let ROOM_SEQ = 0;
 
 export class Room {
-  constructor({ code, name, isPublic, hostToken, map, partySize, allUnlocked, difficulty, rnd }) {
+  constructor({ code, name, isPublic, hostToken, map, partySize, allUnlocked, difficulty, endless, rnd }) {
     this.id = ++ROOM_SEQ;
     this.code = code;
     this.name = (name || 'Iron Line').slice(0, 40);
@@ -32,6 +32,7 @@ export class Room {
     // Quests apply by default; the host can waive them for a casual game.
     this.allUnlocked = allUnlocked === true;
     this.difficulty = DIFFICULTY[difficulty] ? difficulty : 'regular';
+    this.endless = endless === true;
     this.rnd = rnd;
 
     this.state = 'lobby';                 // 'lobby' | 'playing' | 'ended'
@@ -155,6 +156,7 @@ export class Room {
       map: this.map,
       unlocked: this.allUnlocked ? null : new Set(),
       difficulty: this.difficulty,
+      endless: this.endless,
     });
     // Seed each seat's earned weapons from what its client reported on join.
     for (const [seat, s] of this.seats) this.sim.setSeatUnlocks(seat, s.unlocked);
@@ -304,6 +306,7 @@ export class Room {
         code: this.code, name: this.name, isPublic: this.isPublic,
         partySize: this.partySize, map: this.map, allUnlocked: this.allUnlocked,
         difficulty: this.difficulty, difficultyName: diffOf(this.difficulty).name,
+        endless: this.endless,
         mode: MODES[this.partySize], state: this.state,
       },
       roster: this.roster(),
@@ -343,7 +346,7 @@ export class Room {
   listing() {
     return {
       code: this.code, name: this.name, mode: MODES[this.partySize],
-      difficulty: diffOf(this.difficulty).name,
+      difficulty: diffOf(this.difficulty).name, endless: this.endless,
       partySize: this.partySize, players: this.occupied,
       open: this.openSeats.length, state: this.state,
       wave: this.sim ? this.sim.G.wave : 0,

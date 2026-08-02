@@ -20,7 +20,7 @@ import {
   clamp, dist, TOWERS, BOTS, HEALS, ENEMIES, TKEYS, BKEYS,
   hpScale, bossHp, goldScale, armorOf, waveDef, statsOf, botStats,
   kitOf, canUse, upCostOf, healCostOf, PCOL,
-  diffOf, partyScale, bossRamp,
+  diffOf, partyScale, bossRamp, ENDLESS_CAP,
 } from './constants.js';
 import { makeRng } from './rng.js';
 import { loadMap, pickMap } from './map.js';
@@ -29,15 +29,18 @@ const isBotUnit = u => !!(u && u.kind);
 const defOf = u => (isBotUnit(u) ? BOTS[u.kind] : TOWERS[u.type]);
 
 export class Sim {
-  constructor({ seed, players, map = 'random', unlocked = null, difficulty = 'regular' }) {
+  constructor({ seed, players, map = 'random', unlocked = null, difficulty = 'regular',
+                endless = false }) {
     this.rnd = makeRng(seed);
     this.seed = seed >>> 0;
     this.players = clamp(players | 0, 1, 4);
     this.diffKey = diffOf(difficulty) === diffOf('regular') && difficulty !== 'regular'
       ? 'regular' : difficulty;
     this.diff = diffOf(this.diffKey);
-    // 50 waves solo, 100 with company.
-    this.maxWave = maxWaveFor(this.players);
+    // 50 waves solo, 100 with company — or no finish line at all in endless.
+    this.endless = !!endless;
+    this.campaignWave = maxWaveFor(this.players);
+    this.maxWave = this.endless ? ENDLESS_CAP : this.campaignWave;
     // null waives the quest locks for the whole room (a host option). Otherwise
     // each seat brings its own earned set, filled in from the client on join.
     this.unlockedSet = unlocked;
@@ -166,7 +169,7 @@ export class Sim {
     }
     G.wave++; G.waveActive = true; G.spawning = true; G.prep = 0;
     const q = [];
-    for (const grp of waveDef(G.wave, this.maxWave, this.players, this.diffKey)) {
+    for (const grp of waveDef(G.wave, this.campaignWave, this.players, this.diffKey)) {
       let t = 0;
       for (let i = 0; i < grp.c; i++) { q.push({ type:grp.t, at:t }); t += grp.g; }
     }
@@ -456,6 +459,11 @@ export class Sim {
       const bonus = this.sharedBonus((25 + 20 * G.wave) * (.8 + this.rnd() * .4));
       this.credit(0, bonus);
       this.pop(W / 2, 92, 'Wave ' + G.wave + ' cleared  +' + bonus, '#6ee7a8');
+      // In endless the campaign length is a milestone, not an ending.
+      if (this.endless && G.wave === this.campaignWave) {
+        this.pop(W / 2, 118, 'CAMPAIGN CLEARED — ENDLESS BEGINS', '#ffe066');
+        this.ev({ k:'milestone', wave:G.wave });
+      }
       if (G.wave >= this.maxWave) {
         G.over = true; G.won = true;
         this.ev({ k:'over', won:true, title:'Line Held',

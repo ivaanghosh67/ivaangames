@@ -180,6 +180,16 @@ export const partyScale = players => 1 + PARTY_COEFF * (Math.max(1, players) - 1
 export const bossRamp = n => (n >= 12 ? 1 : 0.45 + 0.55 * Math.max(0, n - 5) / 7);
 
 /**
+ * Endless mode: keep going past the final wave instead of winning.
+ *
+ * The existing curve is quadratic in the wave number, so it escalates on its
+ * own without any extra multiplier — wave 150 is already brutally harder than
+ * wave 100. Endless simply removes the finish line and scores how far past it
+ * you get. The wave cap becomes a milestone rather than an ending.
+ */
+export const ENDLESS_CAP = 400;   // a ceiling purely so numbers stay finite
+
+/**
  * The composition of wave `n` in a run that ends at `maxWave`.
  *
  * The `m = n * 2` compression is inherited from the original 50-wave design:

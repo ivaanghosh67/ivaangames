@@ -194,6 +194,23 @@ async function main() {
   ok(snap.E.length > 0, 'enemies are on the field');
   ok((snap.f & 1) === 1, 'waveActive flag is set');
 
+  // ── endless mode is a room option and reaches the run ──
+  {
+    const e = new Client('endless');
+    await e.ready;
+    e.send({ type: 'hello', name: 'Endless' });
+    await e.wait('welcome');
+    e.send({ type: 'create', name: 'endless', isPublic: false, partySize: 1,
+             map: 'Iron Line', endless: true });
+    await e.wait('joined');
+    e.send({ type: 'start' });
+    const st = await e.wait('start');
+    ok(st.info.endless === true, 'endless reaches the run');
+    ok(st.info.consts.MAXWAVE > st.info.consts.CAMPAIGN,
+      `the finish line is removed (cap ${st.info.consts.MAXWAVE} vs campaign ${st.info.consts.CAMPAIGN})`);
+    e.close();
+  }
+
   // ── targeting priority ──
   {
     const idx = [...Array(host.last.s.s.T.length / 12).keys()].find(i => host.last.s.s.T[i * 12] === towerId);

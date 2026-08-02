@@ -195,6 +195,7 @@ function onMessage(ws, msg) {
         partySize: msg.partySize,
         allUnlocked: msg.allUnlocked,
         difficulty: msg.difficulty,
+        endless: msg.endless,
         rnd,
       });
       rooms.set(code, room);
@@ -233,6 +234,7 @@ function onMessage(ws, msg) {
       if (msg.isPublic !== undefined) room.isPublic = !!msg.isPublic;
       if (msg.allUnlocked !== undefined) room.allUnlocked = !!msg.allUnlocked;
       if (msg.difficulty !== undefined && DIFFICULTY[msg.difficulty]) room.difficulty = msg.difficulty;
+      if (msg.endless !== undefined) room.endless = !!msg.endless;
       if (msg.name !== undefined) room.name = String(msg.name).slice(0, 40);
       return room.broadcast(room.lobbyState());
     }

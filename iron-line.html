@@ -223,6 +223,21 @@
   #netPill.on{display:flex}
   #netPill .dot{width:7px;height:7px;border-radius:50%;background:#6ee7a8}
   #netPill.bad .dot{background:var(--hp)}
+  /* ── tutorial ── */
+  #tut{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:8;
+    width:min(560px,calc(100% - 28px));background:rgba(13,17,23,.96);border:1px solid #3b4a5c;
+    border-radius:11px;padding:11px 13px;box-shadow:0 10px 30px rgba(0,0,0,.55);display:none}
+  #tut.on{display:block}
+  .tHead{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .tHead b{font-size:13px;color:#9fd8ff}
+  .tHead .step{margin-left:auto;font-size:10.5px;color:var(--dim)}
+  #tutBody{font-size:12.5px;line-height:1.6}
+  #tutBody kbd{margin:0 1px}
+  .tBtns{display:flex;gap:7px;margin-top:9px}
+  .tBtns button{flex:1;font-size:11.5px;padding:5px}
+  #tutHi{position:absolute;border:2px solid #ffe066;border-radius:9px;pointer-events:none;
+    z-index:7;display:none;box-shadow:0 0 0 9999px rgba(6,9,13,.55)}
+  #tutHi.on{display:block}
 </style>
 </head>
 <body>
@@ -278,6 +293,9 @@
         <div class="sGrp" id="sMulti"><h5>Multiplayer</h5>
           <label class="sRow"><input type="checkbox" data-s="cursors" checked> Teammates' build cursors</label>
           <label class="sRow"><input type="checkbox" data-s="chat" checked> Chat box on screen</label>
+        </div>
+        <div class="sGrp"><h5>Help</h5>
+          <button id="sTutorial">Replay the tutorial</button>
         </div>
         <div class="sGrp"><h5>Progress</h5>
           <div class="sNote" id="sQuestNote"></div>
@@ -418,6 +436,7 @@
             <div class="fRow"><label>Difficulty</label><select id="roomDiff"></select></div>
             <div class="sNote" id="roomDiffNote" style="margin:-4px 0 2px 90px"></div>
             <label class="chk"><input type="checkbox" id="roomPublic"> List it publicly so anyone can join</label>
+            <label class="chk"><input type="checkbox" id="roomEndless"> Endless — no finish line, see how far you get</label>
             <label class="chk"><input type="checkbox" id="roomUnlock"> Skip the quests — give everyone every weapon</label>
             <button id="bCreate" class="primary" style="font-size:15px;padding:10px">Create game</button>
           </div>
@@ -468,6 +487,16 @@
             <button id="bOffline">← Back to local play</button>
           </div>
           <div id="onNet">Connecting…</div>
+        </div>
+      </div>
+
+      <div id="tutHi"></div>
+      <div id="tut">
+        <div class="tHead"><b id="tutTitle">Welcome</b><span class="step" id="tutStep"></span></div>
+        <div id="tutBody"></div>
+        <div class="tBtns">
+          <button id="tutSkip">Skip tutorial</button>
+          <button id="tutNext" class="primary">Next</button>
         </div>
       </div>
 
@@ -756,6 +785,7 @@ const MAXWAVE=50;
 // How long THIS run is. Offline it is always 50; online the server decides
 // (50 solo, 100 with a party) and tells us in the start payload.
 let WAVECAP=MAXWAVE;
+let ENDLESS=false, CAMPAIGN=MAXWAVE;
 const hpScale = n => 1 + .36*(n-1) + .048*(n-1)*(n-1);
 const bossHp  = n => 800 * hpScale(n) * 1.5;
 const goldScale = n => 1 + .04*(n-1);
@@ -3403,7 +3433,7 @@ function syncUI(){
   if(!G) return;
   $('sLives').textContent=G.lives;
   $('sGold').textContent=Math.floor(G.gold);
-  $('sWave').textContent=G.wave+' / '+WAVECAP;
+  $('sWave').textContent=ENDLESS?(G.wave+'  ∞'):(G.wave+' / '+WAVECAP);
   $('sMap').textContent=MAPNAME;
   const cap=maxSquads();
   $('sSquad').textContent=G.bots.length+' / '+(cap===Infinity?'∞':cap);
@@ -3647,6 +3677,93 @@ $('msgB').onclick=()=>{
 };
 
 // ───────────────────────────── admin panel (it's your game — cheat freely)
+// ───────────────────────────── tutorial
+//
+// The first run used to be "here is a board, good luck". These steps wait for
+// the player to actually DO the thing rather than just reading about it, which
+// is the difference between a tutorial and a wall of text. It only appears on a
+// first visit, is skippable at any point, and never runs online — a shared game
+// should not wait for one person to read.
+const TUTKEY='ironline.tutorial';
+let tutStep=-1, tutDone=false;
+try{ tutDone=localStorage.getItem(TUTKEY)==='done'; }catch(_){}
+
+const TUT=[
+  { title:'Hold the road',
+    body:'Enemies walk the dirt road from the left and try to reach the flag on '
+        +'the right. Every one that gets through costs you a life.<br><br>'
+        +'You have <b>250 gold</b>. Let us spend some.',
+    next:'Show me' },
+  { title:'Pick a turret',
+    body:'Click <b>Pistol Turret</b> in the panel on the right — or press <kbd>1</kbd>.',
+    hi:()=>document.querySelector('#shopGun .card'),
+    done:()=>G.place==='pistol' },
+  { title:'Build it',
+    body:'Now click a green tile <b>next to the road</b>. Corners are best: a turret '
+        +'on a bend covers the enemy twice.<br><br>You cannot build on the road itself.',
+    hi:()=>$('wrap'),
+    done:()=>G.towers.length>0 },
+  { title:'Upgrade beats sprawl',
+    body:'Click your turret, then press <kbd>U</kbd> to upgrade it.<br><br>'
+        +'Each level adds <b>46% damage</b>, and it compounds — three upgraded turrets '
+        +'beat nine cheap ones for the same gold. This is the single most useful thing '
+        +'to know about the game.',
+    done:()=>G.towers.some(t=>t.lvl>1) },
+  { title:'Watch for flyers',
+    body:'From wave 3, <b>flyers</b> ignore the road completely and fly straight across. '
+        +'Anything marked <i>hits air</i> can shoot them; the swords cannot.<br><br>'
+        +'Keep some anti-air away from your main cluster.',
+    next:'Got it' },
+  { title:'Call it in early',
+    body:'Press <kbd>Enter</kbd> to start the next wave early. You get <b>3 gold for '
+        +'every second</b> left on the clock.<br><br>Once your line holds comfortably, '
+        +'this is the best income in the game.',
+    hi:()=>$('bWave'),
+    done:()=>G.waveActive||G.wave>0 },
+  { title:'You are set',
+    body:'A boss arrives every wave from wave 5. Bots can body-block them — a Blade Bot '
+        +'buys your turrets several free seconds.<br><br>'
+        +'Everything else is in the <b>⚙ settings</b> and the quest panel. Good luck.',
+    next:'Play' },
+];
+function tutStart(force){
+  if(NET.active) return;                       // never inside a shared game
+  if(tutDone&&!force) return;
+  tutStep=0; paintTut();
+}
+function tutEnd(){
+  tutStep=-1; tutDone=true;
+  try{ localStorage.setItem(TUTKEY,'done'); }catch(_){}
+  $('tut').classList.remove('on');
+  $('tutHi').classList.remove('on');
+}
+function paintTut(){
+  const t=TUT[tutStep];
+  if(!t){ tutEnd(); return; }
+  $('tut').classList.add('on');
+  $('tutTitle').textContent=t.title;
+  $('tutBody').innerHTML=t.body;
+  $('tutStep').textContent=(tutStep+1)+' / '+TUT.length;
+  // A step that waits for an action has no Next button — the action is the button.
+  $('tutNext').style.display=t.done?'none':'';
+  $('tutNext').textContent=t.next||'Next';
+  const el=t.hi&&t.hi();
+  const hi=$('tutHi');
+  if(el){
+    const r=el.getBoundingClientRect(), w=$('wrap').getBoundingClientRect();
+    hi.style.left=(r.left-w.left-4)+'px'; hi.style.top=(r.top-w.top-4)+'px';
+    hi.style.width=(r.width+8)+'px'; hi.style.height=(r.height+8)+'px';
+    hi.classList.add('on');
+  } else hi.classList.remove('on');
+}
+function tutTick(){
+  if(tutStep<0) return;
+  const t=TUT[tutStep];
+  if(t&&t.done&&t.done()){ SOUND.ui(); tutStep++; paintTut(); }
+}
+$('tutNext').onclick=()=>{ SOUND.ui(); tutStep++; paintTut(); };
+$('tutSkip').onclick=()=>{ SOUND.ui(); tutEnd(); };
+
 // ───────────────────────────── sound
 //
 // Everything is synthesised with Web Audio rather than loaded from files. The
@@ -3824,6 +3941,7 @@ $('sVol').addEventListener('input',()=>{
 $('sVol').addEventListener('change',()=>SOUND.ui());
 $('sClose').onclick=()=>toggleSettings(false);
 $('sOpenAdmin').onclick=()=>{ toggleSettings(false); toggleAdmin(true); };
+$('sTutorial').onclick=()=>{ toggleSettings(false); tutStart(true); };
 $('sResetQuests').onclick=()=>{
   if(!confirm('Reset all quest progress?\n\nThis clears your flyer and boss counts,\n'
              +'your best wave, and re-locks Flak, Laser, Railgun and Plasma.')) return;
@@ -4339,8 +4457,10 @@ function netStart(info){
   loadMap({name:info.map.name,way:info.map.way});
   if(FP.on) exitFP();
   toggleAdmin(false);                              // no cheat panel in a shared game
+  tutEnd();                                        // a shared game waits for nobody
   FP.advance=false; FP.keys={};                    // online is pure tower defence
   WAVECAP=(info.consts&&info.consts.MAXWAVE)||MAXWAVE;
+  ENDLESS=!!info.endless; CAMPAIGN=(info.consts&&info.consts.CAMPAIGN)||WAVECAP;
   if(info.difficulty&&DIFFICULTY[info.difficulty.key]) DIFF=info.difficulty.key;
   paintDiff();
   newGame();
@@ -4562,6 +4682,7 @@ function netEvents(list){
       case 'ring':  G.parts.push({x:ev.x,y:ev.y,vx:0,vy:0,life:.28,max:.28,col:ev.col,sz:ev.sz,ring:true});
                     SOUND.splash(); break;
       case 'wave':  SOUND.wave(); break;
+      case 'milestone': SOUND.won(); break;
       case 'over':  NET.outcome=ev; (ev.won?SOUND.won:SOUND.lost)(); break;
     }
   }
@@ -4576,7 +4697,7 @@ function netShowOutcome(){
 function netLeave(){
   NET.active=false; NET.room=null; NET.seat=0; NET.info=null;
   netSend({type:'leave'});
-  MYSEAT=1; PLAYERS=1; AUTOMAP=true; WAVECAP=MAXWAVE;
+  MYSEAT=1; PLAYERS=1; AUTOMAP=true; WAVECAP=MAXWAVE; ENDLESS=false; CAMPAIGN=MAXWAVE;
   paintMpBar(); paintNetStatus();
 }
 
@@ -4657,8 +4778,9 @@ function paintRoom(m){
   $on('roomMap').value=NET.room.map;
   $on('roomPublic').checked=NET.room.isPublic;
   $on('roomUnlock').checked=NET.room.allUnlocked;
-  for(const el of ['roomSize','roomMap','roomPublic','roomUnlock','roomName','roomDiff'])
+  for(const el of ['roomSize','roomMap','roomPublic','roomUnlock','roomEndless','roomName','roomDiff'])
     $on(el).disabled=!NET.isHost||NET.room.state!=='lobby';
+  $on('roomEndless').checked=!!NET.room.endless;
   paintDiff();
   if(m.chat) { NET.chat=m.chat; paintChat(); }
   paintMpBar();
@@ -4792,6 +4914,7 @@ $on('bCreate').onclick=()=>{
     partySize:+$on('roomSize').value,
     map:$on('roomMap').value,
     difficulty:$on('roomDiff').value,
+    endless:$on('roomEndless').checked,
     allUnlocked:$on('roomUnlock').checked});
 };
 $on('bJoin').onclick=()=>{
@@ -4813,13 +4936,14 @@ $on('bCopyLink').onclick=async()=>{
   setTimeout(()=>{ $on('bCopyLink').textContent='Copy invite link'; },1800);
 };
 $on('roomDiff').addEventListener('change',()=>{ if(NET.isHost) setDifficulty($on('roomDiff').value); });
-for(const el of ['roomSize','roomMap','roomPublic','roomUnlock','roomName']){
+for(const el of ['roomSize','roomMap','roomPublic','roomUnlock','roomEndless','roomName']){
   $on(el).addEventListener('change',()=>{
     if(!NET.isHost) return;
     netSend({type:'setopts',
       partySize:+$on('roomSize').value, map:$on('roomMap').value,
       isPublic:$on('roomPublic').checked, allUnlocked:$on('roomUnlock').checked,
-      difficulty:$on('roomDiff').value, name:$on('roomName').value});
+      difficulty:$on('roomDiff').value, endless:$on('roomEndless').checked,
+      name:$on('roomName').value});
   });
 }
 const sendChat=inp=>{
@@ -4864,6 +4988,7 @@ function frame(ts){
     if((FP.on||FP.avatar)&&!G.paused) updateFP(dt);
     if(!G.paused&&!G.over){ for(let i=0;i<G.speed;i++) update(dt); }
   }
+  tutTick();
   draw();
   requestAnimationFrame(frame);
 }
@@ -4872,12 +4997,13 @@ paintModes();                        // lobby is pre-built but hidden — straig
 paintAuto();
 paintQuests();
 paintDiff();
+setTimeout(()=>tutStart(false),700);
 requestAnimationFrame(frame);
 setInterval(()=>{
   $('sTimer').textContent=(!G.waveActive&&!G.over&&G.wave<WAVECAP)?'next in '+G.prep.toFixed(0)+'s':'';
   if(G.sel&&isBot(G.sel)) syncUI();
 },250);
-window.__G=()=>G; window.__FP=FP; window.__GL=()=>GL; window.__NET=NET; window.__SFX=SFX; window.__SOUND=SOUND;
+window.__G=()=>G; window.__FP=FP; window.__GL=()=>GL; window.__NET=NET; window.__tutStart=tutStart; window.__tutEnd=tutEnd; window.__SFX=SFX; window.__SOUND=SOUND;
 window.__sfxInit=sfxInit; window.__sfxVolume=sfxVolume; window.__sfxAllow=sfxAllow;
 window.__T={unlockSecret,gunList,rayPierce,CKEYS,WAY:()=>WAY,PATH:()=>PATH,loadMap,MAPS,randomMap,blocked:()=>blocked,KEEP,THEMES,theme:()=>THEME,topDownFire,hurt,fpFire,useChest,magOf,waveDef,deployBot,buildTower,statsOf,botStats,spawn,kill,startReload,CARRY,TOWERS,BOTS,ENEMIES,hpScale,bossHp,maxSquads,selectSlot,cycleSlot}; Object.defineProperty(window,'__fps',{get:()=>fps});
 })();
