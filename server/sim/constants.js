@@ -212,11 +212,21 @@ export const lateCount = n => 1 + Math.max(0, n - 25) * 0.02;
  * the whole story.
  *
  * Damage now grows as the square root of health, so a bot is a speed bump you
- * rotate rather than a wall you install once. The root keeps early game intact
- * (a wave-5 boss is barely changed) while wave 60 hits about 14× harder, which
- * is past what a Medic can sustain.
+ * rotate rather than a wall you install once.
+ *
+ * Offset so it is exactly 1× through wave 10 and only climbs after. The plain
+ * root was already 1.79× at wave 5, which is the very wave bosses first appear
+ * and the one bossRamp exists to soften — it halved how long a fresh Blade Bot
+ * could hold the first boss, and the reference 4-player runs fell from wave 26
+ * to wave 5 on that alone. The complaint was that the LATE game had no teeth;
+ * making the opening harder was never part of it.
+ *
+ * Costs almost nothing at the far end: wave 60 lands at 11.9× instead of 13.8×,
+ * still far past what a Medic Bot can sustain.
  */
-export const meleeScale = n => Math.sqrt(hpScale(n));
+const MELEE_FLAT_TO = 10;
+export const meleeScale = n =>
+  Math.max(1, Math.sqrt(hpScale(n)) - Math.sqrt(hpScale(MELEE_FLAT_TO)) + 1);
 
 /**
  * Endless mode: keep going past the final wave instead of winning.
@@ -346,10 +356,7 @@ export const buildCostOf = (def, owned) => Math.round(def.cost * buildMul(owned)
  * gold buys six pistols), so the early game is untouched. It only binds late,
  * which is precisely where the game had stopped being one.
  */
-export const TOWER_CAP_BASE = 12;
-export const TOWER_CAP_STEP = 8;    // +1 allowance every 8 waves
-export const TOWER_CAP_MAX  = 18;
-export const TOWER_CAP_MIN  = 6;    // never so few that a seat has no say
+export const TOWER_CAP_SOLO = 18;
 /**
  * The allowance shrinks as the squad grows, because the road is the same length
  * however many people are defending it. Measured: a *total* board near 26 maxed
@@ -359,11 +366,17 @@ export const TOWER_CAP_MIN  = 6;    // never so few that a seat has no say
  * problem in a new costume. Dividing by the root of the party size holds the
  * total near that mark while still giving every seat a real share to command.
  *
- *   solo 12→18 · duo 8→13 each (26) · trio 7→10 each (30) · squad 6→9 each (36)
+ *   solo 18 · duo 13 each (26) · trio 10 each (30) · squad 9 each (36)
+ *
+ * Flat, not growing with the wave. An allowance that starts small and opens up
+ * binds hardest at the beginning, which is exactly backwards — the opening was
+ * never the problem. Telemetry has a real duo on 8-9 turrets each by wave 5, so
+ * a growing cap would have squeezed their first ten minutes to fix a fault that
+ * only appears at wave 44. Flat means it cannot bite until you can afford more
+ * than the limit, which is the late game by construction.
  */
-export const towerCapOf = (wave, players = 1) => Math.max(TOWER_CAP_MIN, Math.round(
-  Math.min(TOWER_CAP_MAX, TOWER_CAP_BASE + Math.floor(Math.max(0, wave) / TOWER_CAP_STEP))
-  / Math.sqrt(clamp(players | 0, 1, 4))));
+export const towerCapOf = (wave, players = 1) =>
+  Math.round(TOWER_CAP_SOLO / Math.sqrt(clamp(players | 0, 1, 4)));
 
 /**
  * Build permits — one extra turret slot, at a price that compounds.

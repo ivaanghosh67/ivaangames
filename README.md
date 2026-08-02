@@ -51,7 +51,12 @@ open it. The whole single-player game is in that one file.
   compete on the scoreboard and cooperate on survival
 - **A quest system** that unlocks the four heavy weapons through play, with
   progress saved between runs
-- **Six hand-built maps plus an infinite random map generator**
+- **Six hand-built maps plus an infinite random map generator**, picked from
+  thumbnails that draw each map's actual road
+- **A turret allowance per player**, so you win by upgrading rather than sprawling
+  — with **Build Permits** to turn a late-game fortune back into board space
+- **Plays on phones and tablets** — drag to aim, lift to place, with the board
+  pinned above the shop
 - **Reconnect protection** — drop out and your seat and everything you built are
   held for 90 seconds
 - **Runs offline from a single HTML file.** No install, no build step, no account
@@ -124,6 +129,23 @@ host clicks **Start the run**.
 Couch co-op gives players 2–4 their own keyboard cluster and their own on-screen
 cursor — the layouts are listed in the party lobby.
 
+### Touch
+
+| Action | Gesture |
+|---|---|
+| Aim | **Drag** — the build preview follows your finger |
+| Place / select / order | **Lift** your finger |
+| Everything else | Tap the on-screen buttons |
+
+The preview matters more than it sounds: a touchscreen fires no `mousemove`, so
+without it a tap places a turret blind — you cannot see which tile you are
+buying, whether it is even legal, or what the range ring covers.
+
+Below 980px the board and shop stack, and the board is **pinned to the top** so
+the fight stays visible while you scroll the shop. Tap targets grow on coarse
+pointers. First-person mode is hidden on touch-only devices, since it steers
+with pointer lock and WASD.
+
 ---
 
 ## The board
@@ -168,13 +190,26 @@ nobody, so everyone is paid for those.
 Bounties are not fixed. Each kill pays the enemy's base value **±35%**, and
 **8% of kills pay a ×3 jackpot**. Enemy values also rise about **4% per wave**.
 
-Two bonuses pay **every player in full** rather than being split:
+Two bonuses go to **every player** rather than to one earner:
 
 - **Clearing a wave** — `(25 + 20 × wave) × 0.8–1.2` gold
 - **Calling a wave early** — 3 gold for every second left on the countdown
 
-That last one is the most reliable income in the game. If your line is holding
-comfortably, calling waves in early compounds fast.
+Each player receives a **share**, not the full amount: the base is multiplied by
+`partyScale(players) ÷ players`, then by the difficulty's income factor. A squad
+of four faces 3.4× the enemies between the four of them, so each takes 3.4 ÷ 4 =
+**0.85 of a solo bonus**. Paying everyone in full was half of why co-op used to
+be a cheat code — four players collected four bonuses against a single wave.
+
+| Party | Share each | Party total |
+|---|---:|---:|
+| Solo | ×1.00 | ×1.00 |
+| Duo | ×0.90 | ×1.80 |
+| Trio | ×0.87 | ×2.60 |
+| Squad | ×0.85 | ×3.40 |
+
+Calling waves in early is still the most reliable income in the game. If your
+line is holding comfortably, it compounds fast.
 
 ---
 
@@ -393,16 +428,20 @@ is shown as **Turrets n / cap** in the top bar and turns red when you are full.
 The allowance **grows with the wave** (+1 every 8 waves) and **shrinks with the
 party size** — the road is the same length however many people are defending it.
 
-| Party | Opening | Late game | Party total |
-|---|---:|---:|---:|
-| Solo | 12 | 18 | 18 |
-| Duo | 8 each | 13 each | 26 |
-| Trio | 7 each | 10 each | 30 |
-| Squad of four | 6 each | 9 each | 36 |
+| Party | Each player | Party total |
+|---|---:|---:|
+| Solo | 18 | 18 |
+| Duo | 13 | 26 |
+| Trio | 10 | 30 |
+| Squad of four | 9 | 36 |
 
-The opening allowance is deliberately more than 250 starting gold can buy, so
-the early game plays exactly as it always did. The limit only bites later —
-which is precisely where the game had stopped being one.
+It is **flat across the whole run**, not something that opens up as you
+progress. A growing allowance binds hardest at the start, which is exactly
+backwards — the opening was never the problem. Telemetry has a real duo on 8–9
+turrets each by wave 5, so a cap that started small would have squeezed their
+first ten minutes to fix a fault that does not appear until wave 44. Flat means
+it cannot bite until you can afford more than the limit, which is the late game
+by construction.
 
 ### Why the limit exists
 

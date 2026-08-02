@@ -155,14 +155,21 @@ function makeStrategy(sim, seat, partySize, rnd) {
       applyIntent(sim, seat, { a: 'permit' });
       return;
     }
-    if (towerKeys.length && mineT.length < wantTowers) {
+    // Only ends the turn if the build was actually ALLOWED. It used to return
+    // on the attempt, so once the turret allowance was reached — while
+    // wantTowers still asked for more — the bot spent every remaining turn on
+    // refused builds and never reached bots or upgrades. Four-player runs
+    // fielded 4 bots instead of 12 and died at wave 5, which looked exactly
+    // like a game balance problem and was not one.
+    if (towerKeys.length && mineT.length < wantTowers && mineT.length < sim.towerCap(seat)) {
       for (const k of towerKeys) {
         if (TOWERS[k].cost > gold) continue;
         for (let i = 0; i < 60; i++) {
           const s = spots[Math.floor(rnd() * Math.min(spots.length, 90))];
           if (sim.canBuild(s.c, s.r)) {
-            applyIntent(sim, seat, { a: 'build', k, c: s.c, r: s.r });
-            return;
+            const res = applyIntent(sim, seat, { a: 'build', k, c: s.c, r: s.r });
+            if (res && res.ok) return;
+            break;                       // refused (price, lock) — try the next gun
           }
         }
       }

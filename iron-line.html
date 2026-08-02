@@ -34,6 +34,9 @@
   button.primary:hover:not(:disabled){background:linear-gradient(180deg,#37955e,#2b7d4e)}
   #wrap{position:relative;line-height:0}
   canvas{background:#111820;border:1px solid var(--line);border-radius:10px;display:block;cursor:crosshair}
+  /* Aiming must not scroll the page out from under you. The canvas owns its
+     own gestures; everything else on the page scrolls normally. */
+  #cv,#gl{touch-action:none}
   #gl{position:absolute;inset:0;display:none;background:#6b7a80}
   #wrap.fp #gl{display:block}
   #wrap.fp #cv{background:transparent;position:relative;z-index:1}
@@ -246,6 +249,38 @@
   #tutHi{position:absolute;border:2px solid #ffe066;border-radius:9px;pointer-events:none;
     z-index:7;display:none;box-shadow:0 0 0 9999px rgba(6,9,13,.55)}
   #tutHi.on{display:block}
+
+  /* ── narrow screens ─────────────────────────────────────────────────────
+     The desktop layout is a fixed 880×600 board with a 252px shop beside it,
+     which is wider than any phone. Stack them instead and let the board scale
+     to the width available. The canvas keeps its 880×600 backing store, so
+     nothing about the game changes — toCanvas() already converts through
+     getBoundingClientRect, so a scaled board maps taps to the right tile. */
+  @media (max-width:980px){
+    body{padding:6px;align-items:flex-start}
+    #app{flex-direction:column;width:100%;max-width:880px;gap:8px}
+    #left,#wrap,#side{width:100%}
+    /* Stacked, the shop runs thousands of pixels down the page. Pin the board
+       so you can still watch the wave while scrolling to buy something —
+       otherwise every purchase means losing sight of the fight. */
+    #left{position:sticky;top:0;z-index:6;background:var(--bg);
+      padding-bottom:6px;box-shadow:0 6px 12px -6px rgba(0,0,0,.8)}
+    #cv,#gl{width:100%;height:auto}
+    #side{box-sizing:border-box;max-height:none;width:100%}
+    #topbar{flex-wrap:wrap;gap:7px;padding:7px 9px}
+    #topbar .sep{display:none}
+    .stat{font-size:13.5px}
+    /* Keyboard shortcuts are not reachable without a keyboard. */
+    #hint{display:none}
+  }
+  /* Touch devices get bigger tap targets — 26px shop icons are a miss waiting
+     to happen with a fingertip. */
+  @media (pointer:coarse){
+    .card{padding:10px 9px}
+    .card .ic{width:32px;height:32px;flex:0 0 32px;font-size:18px}
+    button{padding:9px 12px}
+    #topbar button{padding:8px 10px}
+  }
 </style>
 </head>
 <body>
@@ -813,8 +848,13 @@ const bossHp  = n => 800 * hpScale(n) * 1.5;
 // permanently unkillable and nothing ever reached the flag. Measured: a maxed
 // board took zero leaks to wave 120; remove its bots and it broke at wave 60.
 // Damage now grows as the root of health, so a bot is a speed bump you rotate
-// rather than a wall you install once. MUST match server/sim/constants.js.
-const meleeScale = n => Math.sqrt(hpScale(n));
+// rather than a wall you install once. Offset so it is exactly 1× through wave
+// 10: the plain root was 1.79× at wave 5, the very wave bosses first appear,
+// and it halved how long a fresh Blade Bot held the first boss. The late game
+// was the problem; the opening was not. MUST match server/sim/constants.js.
+const MELEE_FLAT_TO = 10;
+const meleeScale = n =>
+  Math.max(1, Math.sqrt(hpScale(n)) - Math.sqrt(hpScale(MELEE_FLAT_TO)) + 1);
 const goldScale = n => 1 + .04*(n-1);
 const armorOf = (base,n) => base + Math.floor(n/6);
 
@@ -915,14 +955,15 @@ const buildCost=k=>TOWERS[k]?Math.round(TOWERS[k].cost*buildMul(myTowerCount()))
 // income is unbounded, so this is a limit. Opens at 10 — more than the 250
 // starting gold can buy — so the opening is untouched and it only bites late.
 // MUST match server/sim/constants.js.
-// The allowance also shrinks as the squad grows — the road is the same length
-// however many people defend it, and four players on a flat allowance fielded
-// 52 turrets and sailed through wave 100 untouched.
-//   solo 12→18 · duo 8→13 each · trio 7→10 each · squad 6→9 each
-const TOWER_CAP_BASE=12, TOWER_CAP_STEP=8, TOWER_CAP_MAX=18, TOWER_CAP_MIN=6;
-const towerCapOf=(w,players)=>Math.max(TOWER_CAP_MIN,Math.round(
-  Math.min(TOWER_CAP_MAX,TOWER_CAP_BASE+Math.floor(Math.max(0,w)/TOWER_CAP_STEP))
-  /Math.sqrt(Math.min(4,Math.max(1,players|0)))));
+// The allowance shrinks as the squad grows — the road is the same length
+// however many people defend it, and four players on a flat per-player
+// allowance fielded 52 turrets and sailed through wave 100 untouched.
+// Flat across waves on purpose: a cap that opens up as you progress binds
+// hardest at the start, which is exactly backwards.
+//   solo 18 · duo 13 each · trio 10 each · squad 9 each
+const TOWER_CAP_SOLO=18;
+const towerCapOf=(w,players)=>
+  Math.round(TOWER_CAP_SOLO/Math.sqrt(Math.min(4,Math.max(1,players|0))));
 // Permits buy one extra slot each, at a price that compounds 2.1× a time — so
 // surplus gold has somewhere to go without reopening the door to sprawl.
 // MUST match server/sim/constants.js.
@@ -3656,6 +3697,37 @@ const toCanvas=ev=>{ const r=cv.getBoundingClientRect();
   return {x:(ev.clientX-r.left)*(W/r.width), y:(ev.clientY-r.top)*(H/r.height)}; };
 cv.addEventListener('mousemove',ev=>{ const p=toCanvas(ev); mouse.x=p.x; mouse.y=p.y; });
 cv.addEventListener('mouseleave',()=>{ mouse.x=-99; mouse.y=-99; });
+
+// ── touch ────────────────────────────────────────────────────────────────
+// A touchscreen never fires mousemove, so the build ghost stays wherever the
+// mouse last was — off-screen, usually — and a tap places a turret blind. You
+// cannot see which tile you are buying, whether it is legal, or what the range
+// ring covers. That is the whole reason the game was unplayable on a phone.
+//
+// So: drag to aim (the ghost tracks your finger), lift to commit. Lifting
+// synthesises the click the mouse path would have produced, which reuses every
+// bit of the existing placement, selection and ordering logic rather than
+// duplicating it. preventDefault stops the browser's own delayed click, so
+// nothing fires twice.
+{
+  const aimAt=t=>{ const p=toCanvas(t); mouse.x=p.x; mouse.y=p.y; };
+  cv.addEventListener('touchstart',ev=>{
+    if(ev.touches.length!==1) return;          // leave pinches to the browser
+    aimAt(ev.touches[0]); ev.preventDefault();
+  },{passive:false});
+  cv.addEventListener('touchmove',ev=>{
+    if(ev.touches.length!==1) return;
+    aimAt(ev.touches[0]); ev.preventDefault();
+  },{passive:false});
+  cv.addEventListener('touchend',ev=>{
+    const t=ev.changedTouches[0];
+    if(!t||ev.touches.length) return;
+    aimAt(t);
+    cv.dispatchEvent(new MouseEvent('click',{clientX:t.clientX,clientY:t.clientY}));
+    ev.preventDefault();
+  },{passive:false});
+  cv.addEventListener('touchcancel',()=>{ mouse.x=-99; mouse.y=-99; });
+}
 cv.addEventListener('click',ev=>{
   if(G.over) return;
   if(FP.on){                                   // first person
@@ -4163,6 +4235,19 @@ for(const btn of document.querySelectorAll('#admin [data-a]')){
 }
 $('bAdmin').onclick=()=>toggleSettings();
 $('bFP').onclick=()=>{ FP.on?exitFP():enterFP(); };
+// First person steers with pointer lock and WASD, neither of which a phone has.
+// Offering the button anyway just strands you in a mode you cannot leave.
+// Re-checked on change rather than only at load, so plugging a mouse into a
+// tablet brings it back and unplugging one takes it away again.
+{
+  const coarse=matchMedia('(pointer:coarse)'), fine=matchMedia('(pointer:fine)');
+  const paintFP=()=>{
+    const touchOnly=coarse.matches&&!fine.matches;
+    $('bFP').style.display=(touchOnly||!('requestPointerLock' in Element.prototype))?'none':'';
+  };
+  for(const m of [coarse,fine]) m.addEventListener('change',paintFP);
+  paintFP();
+}
 $('aClose').onclick=()=>toggleAdmin(false);
 
 // ───────────────────────────── lobby
@@ -5174,6 +5259,7 @@ window.__G=()=>G; window.__FP=FP; window.__GL=()=>GL; window.__NET=NET; window._
 window.__sfxInit=sfxInit; window.__sfxVolume=sfxVolume; window.__sfxAllow=sfxAllow;
 window.__T={unlockSecret,gunList,rayPierce,CKEYS,WAY:()=>WAY,PATH:()=>PATH,loadMap,MAPS,randomMap,blocked:()=>blocked,KEEP,THEMES,theme:()=>THEME,topDownFire,hurt,fpFire,useChest,magOf,waveDef,deployBot,buildTower,statsOf,botStats,spawn,kill,startReload,CARRY,TOWERS,BOTS,ENEMIES,hpScale,bossHp,maxSquads,selectSlot,cycleSlot,
   towerCapOf,towerCap,permitCost,permitCostOf,buyPermit,meleeScale}; Object.defineProperty(window,'__fps',{get:()=>fps});
+window.__mouseX=()=>mouse.x; window.__mouseY=()=>mouse.y;
 })();
 </script>
 </body>

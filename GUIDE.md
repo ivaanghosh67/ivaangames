@@ -119,16 +119,15 @@ you want it to go.
 ## You only get so many turrets
 
 There is a limit on how many turrets **you personally** can have standing, shown
-as **Turrets 7 / 12** at the top of the screen. It goes up as the waves go by,
-and it goes down the more people are playing — the road is the same length
-however many of you are defending it.
+as **Turrets 7 / 13** at the top of the screen. It goes down the more people are
+playing — the road is the same length however many of you are defending it.
 
-| Playing | You start with | By late game |
-|---|---:|---:|
-| On your own | 12 | 18 |
-| Two players | 8 each | 13 each |
-| Three players | 7 each | 10 each |
-| Four players | 6 each | 9 each |
+| Playing | You get |
+|---|---:|
+| On your own | 18 |
+| Two players | 13 each |
+| Three players | 10 each |
+| Four players | 9 each |
 
 This is the single most important rule to understand, because it means **you
 cannot win by building more stuff**. You win by making the guns you have better.
@@ -244,7 +243,16 @@ Yes! Download the file `iron-line.html` from
 whole single-player game is in that one file. You just can't play with friends.
 
 **Does it work on a phone?**
-Not well yet — it's built for a mouse. Use a laptop or desktop for now.
+Yes. The board and the shop stack on top of each other, and the board stays
+pinned to the top of the screen so you can still watch the fight while you
+scroll down to buy something.
+
+**Drag your finger to aim, then lift to place.** The preview follows your finger
+so you can see exactly which square you're about to build on before you commit —
+handy when the squares are small.
+
+A tablet or a phone held sideways gives you a much bigger board than portrait.
+First-person mode is hidden on phones because it needs a mouse and keyboard.
 
 **Why can't I build there?**
 You can't build on the road itself, or on top of another gun.
