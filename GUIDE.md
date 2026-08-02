@@ -202,7 +202,11 @@ Up to **four people** can play together, each on their own computer.
 
 ### Things to know about playing together
 
-- **You each have your own gold.** You earn it from your own guns' kills.
+- **You each have your own gold.** Every kill is shared out according to **how
+  much damage your guns did to it** — so if you wear a boss down to its last
+  sliver, you get paid for that even if your friend's shot finishes it.
+  Hitting something that was already nearly dead only counts for what was
+  actually left, so nobody can steal a bounty with one big late shot.
 - **You share lives.** If the line breaks, everyone loses together.
 - **Your guns are yours.** Only you can upgrade or sell them.
 - **More players means more enemies** — about 80% more per extra person. Teaming

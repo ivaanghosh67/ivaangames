@@ -1023,14 +1023,32 @@ function spawn(type){
   G.enemies.push({type,x:p[0].x,y:p[0].y,wp:1,hp,maxhp:hp,
     speed:b.speed*(type==='boss'?1:(.94+Math.random()*.12)),
     armor:armorOf(b.armor,G.wave), r:b.r, fly:b.fly, dps:b.dps*meleeScale(G.wave),
-    gold:Math.round(b.gold*goldScale(G.wave)),slowT:0,slowF:1,prog:0,angle:0,hit:0,block:null});
+    gold:Math.round(b.gold*goldScale(G.wave)),slowT:0,slowF:1,prog:0,angle:0,hit:0,block:null,
+    // Who hurt this enemy and by how much — index 0 is nobody in particular.
+    // Couch co-op shares one purse, so this only decides the scoreboard and
+    // quest credit here; online the server splits the gold the same way.
+    dmgBy:[0,0,0,0,0],dmgTot:0});
 }
 
 // ───────────────────────────── combat
 function hurt(e,dmg,pierce,src){
-  e.hp -= pierce ? dmg : Math.max(1,dmg-e.armor);
+  const applied = pierce ? dmg : Math.max(1,dmg-e.armor);
+  // Only damage that actually landed counts — overkill must not, or a railgun
+  // finishing a grunt on 10 hp books its full 1,200. Mirrors the server.
+  const real = Math.max(0,Math.min(applied,e.hp));
+  const seat = src&&src.owner>=1&&src.owner<=4 ? src.owner : 0;
+  if(e.dmgBy){ e.dmgBy[seat]+=real; e.dmgTot+=real; }
+  if(src&&typeof src.dmgDone==='number') src.dmgDone+=real;
+  e.hp -= applied;
   e.hit=.12;
   if(e.hp<=0) kill(e,src);
+}
+// Whose guns did most of the work — a better answer to "who killed it" than
+// whose shot happened to land last. 0 when nobody owned any of it.
+function topDamager(e){
+  let top=0,best=0;
+  if(e.dmgBy) for(let s=1;s<=G.players;s++) if(e.dmgBy[s]>best){ best=e.dmgBy[s]; top=s; }
+  return top;
 }
 function kill(e,src){
   const i=G.enemies.indexOf(e); if(i<0) return;
@@ -1042,7 +1060,11 @@ function kill(e,src){
   pop(e.x,e.y-e.r-4,(jack?'JACKPOT +':'+')+drop, jack?'#ffe066':'#f2c14e');
   if(jack) burst(e.x,e.y,'#ffe066',18,150);
   burst(e.x,e.y,ENEMIES[e.type].color,e.type==='boss'?46:14,e.type==='boss'?220:120);
-  if(src){ src.kills++; if(src.owner) G.score[src.owner]++; }
+  // A unit's own `kills` stays literal — it counts killing blows, which is what
+  // the word means on an inspect panel. The scoreboard follows the damage.
+  if(src) src.kills++;
+  const earner=topDamager(e);
+  if(earner) G.score[earner]++;
   // offline quest progress (online it arrives from the server in the snapshot)
   if(!NET.active){
     if(e.fly) questBump('flyerKills',1,true);
@@ -3508,7 +3530,7 @@ function buildTower(k,c,r,owner,px,py){
   const cost=Math.round(TOWERS[k].cost*buildMul(owned));
   if(!spend(cost)){ pop(px,py,'need '+cost+'g','#e5534b'); return null; }
   const t={type:k,c,r,x:c*TS+TS/2,y:r*TS+TS/2,lvl:1,cd:0,a:-Math.PI/2,
-    kills:0,spent:cost,flash:0,spin:0,swingDir:1,ramp:0,owner};
+    kills:0,dmgDone:0,spent:cost,flash:0,spin:0,swingDir:1,ramp:0,owner};
   G.towers.push(t); burst(t.x,t.y,TOWERS[k].color,10,90); SOUND.build();
   return t;
 }
@@ -3518,7 +3540,7 @@ function deployBot(k,x,y,owner){
     pop(x,y,'squad limit '+maxSquads()+' — recall one first','#e5534b'); return null; }
   if(!spend(D.cost)){ pop(x,y,'need '+D.cost+'g','#e5534b'); return null; }
   const b={kind:k,x,y,rx:x,ry:y,lvl:1,hp:D.hp,cd:0,a:-Math.PI/2,
-    kills:0,spent:D.cost,flash:0,dead:false,respawn:0,swingDir:1,owner};
+    kills:0,dmgDone:0,spent:D.cost,flash:0,dead:false,respawn:0,swingDir:1,owner};
   G.bots.push(b); burst(x,y,D.color,14,110); SOUND.build();
   return b;
 }
@@ -4919,6 +4941,14 @@ function netEvents(list){
         else if(/cleared/.test(ev.txt)) SOUND.cleared();
         break;
       case 'burst': burst(ev.x,ev.y,ev.col,ev.n,ev.sp); if(ev.n>=14) SOUND.kill(); break;
+      // Your cut of a bounty, not the room's. A kill is split across everyone
+      // whose guns hurt it, so showing the total would tell three players in
+      // four a number they never received.
+      case 'gold':
+        if(ev.seat!==MYSEAT) break;
+        pop(ev.x,ev.y,(ev.jack?'JACKPOT +':'+')+ev.n,ev.jack?'#ffe066':'#f2c14e');
+        if(ev.jack) SOUND.gold();
+        break;
       case 'zap':
         G.zaps.push({x1:ev.x1,y1:ev.y1,x2:ev.x2,y2:ev.y2,life:ev.life,col:ev.col,w:ev.w});
         SOUND.shot(ev.w>=3?'railgun':ev.w<=2?'laser':'sniper');
@@ -5260,6 +5290,7 @@ window.__sfxInit=sfxInit; window.__sfxVolume=sfxVolume; window.__sfxAllow=sfxAll
 window.__T={unlockSecret,gunList,rayPierce,CKEYS,WAY:()=>WAY,PATH:()=>PATH,loadMap,MAPS,randomMap,blocked:()=>blocked,KEEP,THEMES,theme:()=>THEME,topDownFire,hurt,fpFire,useChest,magOf,waveDef,deployBot,buildTower,statsOf,botStats,spawn,kill,startReload,CARRY,TOWERS,BOTS,ENEMIES,hpScale,bossHp,maxSquads,selectSlot,cycleSlot,
   towerCapOf,towerCap,permitCost,permitCostOf,buyPermit,meleeScale}; Object.defineProperty(window,'__fps',{get:()=>fps});
 window.__mouseX=()=>mouse.x; window.__mouseY=()=>mouse.y;
+window.__netEvents=netEvents; window.__seat=()=>MYSEAT;
 })();
 </script>
 </body>

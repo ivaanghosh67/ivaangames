@@ -106,9 +106,14 @@ export const track = {
     const G = sim.G;
     // Tower-by-tower value: what it cost across its whole life versus what it
     // actually killed. This is the number that tells us if a turret is worth it.
+    // `dmg` is the honest measure of a unit's contribution; `kills` only ever
+    // counted whose shot happened to land last, which flatters fast cheap guns
+    // standing next to slow heavy ones.
     const units = [
-      ...G.towers.map(t => ({ kind: t.type, lvl: t.lvl, spent: t.spent, kills: t.kills, seat: t.owner })),
-      ...G.bots.map(b => ({ kind: b.kind, lvl: b.lvl, spent: b.spent, kills: b.kills, seat: b.owner })),
+      ...G.towers.map(t => ({ kind: t.type, lvl: t.lvl, spent: t.spent, kills: t.kills,
+        dmg: Math.round(t.dmgDone || 0), seat: t.owner })),
+      ...G.bots.map(b => ({ kind: b.kind, lvl: b.lvl, spent: b.spent, kills: b.kills,
+        dmg: Math.round(b.dmgDone || 0), seat: b.owner })),
     ];
     A.emit('run_end', {
       run, reason,                       // 'won' | 'lost' | 'abandoned' | 'restarted'

@@ -211,14 +211,91 @@ export class Sim {
       dps:b.dps * meleeScale(G.wave),
       gold:Math.round(b.gold * goldScale(G.wave)),
       slowT:0, slowF:1, prog:0, angle:0, hit:0, block:null,
+      // Who has hurt this enemy and by how much. Index 0 is nobody in
+      // particular (the rampart guards); 1-4 are the seats. A plain array
+      // rather than an object, so no key off a wire can ever land in it.
+      dmgBy:[0, 0, 0, 0, 0], dmgTot:0,
     });
   }
 
   // ── combat ──────────────────────────────────────────────────────────────
   hurt(e, dmg, pierce, src) {
-    e.hp -= pierce ? dmg : Math.max(1, dmg - e.armor);
+    const applied = pierce ? dmg : Math.max(1, dmg - e.armor);
+    // Bank only the damage that actually landed. Overkill must not count:
+    // without the clamp, a railgun finishing a grunt on 10 hp would book its
+    // full 1,200 and walk off with a bounty the guns that did the real work
+    // had earned. `e.hp` can already be <= 0 here (two bullets resolving in
+    // one tick), which the clamp reads as zero rather than negative.
+    const real = Math.max(0, Math.min(applied, e.hp));
+    const seat = src && src.owner >= 1 && src.owner <= 4 ? src.owner : 0;
+    e.dmgBy[seat] += real;
+    e.dmgTot += real;
+    // Per-unit lifetime damage, so analytics can ask what a turret was worth
+    // rather than only how many blows it happened to land last.
+    if (src && typeof src.dmgDone === 'number') src.dmgDone += real;
+    e.hp -= applied;
     e.hit = .12;
     if (e.hp <= 0) this.kill(e, src);
+  }
+
+  /**
+   * Split a bounty across whoever actually did the damage.
+   *
+   * Last-hit attribution is arbitrary and it shows: a turret could grind a
+   * boss down to a sliver and earn nothing because somebody else's shot
+   * happened to land on the final tick. Worse, it rewards the wrong things —
+   * a fast cheap gun snipes bounties off the heavy hitter beside it.
+   *
+   * Damage nobody owns (the two free guards on the rampart) is spread evenly
+   * across the party, which preserves the old rule that a guard kill paid the
+   * whole room rather than nobody.
+   *
+   * The split uses largest-remainder. Rounding each share on its own would
+   * quietly mint or destroy a gold piece on most kills, and at several
+   * thousand kills a run that is a real drift in everyone's purse.
+   */
+  payout(e, drop, jack) {
+    const G = this.G, n = this.players;
+    const share = new Array(n + 1).fill(0);
+    if (e.dmgTot > 0) {
+      const free = e.dmgBy[0] / e.dmgTot / n;
+      for (let s = 1; s <= n; s++) share[s] = e.dmgBy[s] / e.dmgTot + free;
+    } else {
+      // Nothing recorded at all — a scripted kill, or damage that was pure
+      // overkill. Nobody has a claim, so everybody does.
+      for (let s = 1; s <= n; s++) share[s] = 1 / n;
+    }
+    const out = new Array(n + 1).fill(0), rem = [];
+    let used = 0;
+    for (let s = 1; s <= n; s++) {
+      const v = drop * share[s];
+      out[s] = Math.floor(v);
+      used += out[s];
+      rem.push({ s, frac: v - out[s] });
+    }
+    rem.sort((a, b) => b.frac - a.frac);
+    for (let i = 0, left = drop - used; i < left && rem.length; i++) out[rem[i % rem.length].s]++;
+    // One event per paid seat, carrying where the kill happened. Events are
+    // broadcast, so each client renders only its own share — showing everybody
+    // the room's total would tell three of four players a number they did not
+    // receive.
+    for (let s = 1; s <= n; s++) {
+      if (out[s] <= 0) continue;
+      G.purse[s] += out[s];
+      this.ev({ k:'gold', seat:s, n:out[s], x:Math.round(e.x), y:Math.round(e.y - e.r - 4),
+        jack:jack ? 1 : 0 });
+    }
+    return out;
+  }
+
+  /** Whose guns did the most work — a better answer to "who killed it" than
+   *  whose shot happened to land last. Returns 0 when nobody owned any of it. */
+  topDamager(e) {
+    let top = 0, best = 0;
+    for (let s = 1; s <= this.players; s++) {
+      if (e.dmgBy[s] > best) { best = e.dmgBy[s]; top = s; }
+    }
+    return top;
   }
 
   kill(e, src) {
@@ -229,16 +306,17 @@ export class Sim {
     // randomised bounty: ±35% swing, with an occasional jackpot drop
     const jack = rnd() < .08;
     const drop = Math.max(1, Math.round(e.gold * (.65 + rnd() * .7) * (jack ? 3 : 1) * this.diff.income));
-    // The bounty goes to whoever's gun did it. Kills by the free rampart guards
-    // belong to nobody, so everyone gets paid for those.
-    const earner = src && src.owner ? src.owner : 0;
-    this.credit(earner, drop);
-    this.ev({ k:'gold', seat:earner, n:drop });
-    this.pop(e.x, e.y - e.r - 4, (jack ? 'JACKPOT +' : '+') + drop, jack ? '#ffe066' : '#f2c14e');
+    // The bounty is split across everyone whose guns hurt it, in proportion to
+    // the damage they actually did.
+    this.payout(e, drop, jack);
     if (jack) this.burst(e.x, e.y, '#ffe066', 18, 150);
     this.burst(e.x, e.y, ENEMIES[e.type].color, e.type === 'boss' ? 46 : 14, e.type === 'boss' ? 220 : 120);
-    if (src) { src.kills++; if (src.owner) G.score[src.owner]++; }
-    // Quest progress goes to whoever's weapon did it.
+    // A unit's own `kills` stays literal — it counts killing blows, which is
+    // what the word means on an inspect panel. The room scoreboard and quest
+    // credit follow the damage instead.
+    const earner = this.topDamager(e);
+    if (src) src.kills++;
+    if (earner) G.score[earner]++;
     const q = earner && G.quest[earner];
     if (q) {
       if (e.fly) q.flyerKills++;

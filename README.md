@@ -183,9 +183,26 @@ the line together or you lose together.
 You start with **250 gold**. In online co-op **every player has their own purse**,
 and every purse starts at 250.
 
-**Kill bounties go to the owner of the gun that lands the killing shot.** Your
-turret finishes something, you get paid. Kills by the free keep guards belong to
-nobody, so everyone is paid for those.
+**Kill bounties are split across everyone whose guns hurt the thing, in
+proportion to the damage each of them actually dealt.** Grind a boss down to a
+sliver and you are paid for that work whether or not your shot lands last.
+
+Only damage that actually landed counts — **overkill does not**. A railgun
+finishing a grunt sitting on 10 health books 10 damage, not its full 1,200, so
+it cannot walk off with a bounty the guns that did the real work had earned.
+
+Damage dealt by the free keep guards belongs to nobody, so their share is spread
+evenly across the party. The split uses largest-remainder rounding, so the parts
+always sum to exactly the bounty — no gold is minted or lost.
+
+> **Why it is not last-hit.** It used to be: whoever landed the killing blow
+> took the whole bounty. That is arbitrary, and it rewards the wrong thing — a
+> cheap fast turret standing beside a slow heavy one snipes its bounties, and a
+> gun that does 95% of the damage to a boss can earn nothing at all.
+
+**The scoreboard and quest progress follow the damage too**, going to whoever
+did the most of it rather than to whoever fired last. A turret's own **Kills**
+figure on the inspect panel still counts literal killing blows.
 
 Bounties are not fixed. Each kill pays the enemy's base value **±35%**, and
 **8% of kills pay a ×3 jackpot**. Enemy values also rise about **4% per wave**.
@@ -596,12 +613,12 @@ investment or spend your money.
 **Kills are tracked per player** and shown on the scoreboard, so there are
 bragging rights even though you win or lose together.
 
-**Gold goes to the gun that lands the killing blow** — specifically, to that
-gun's owner. Bounties swing ±35% with an 8% chance of a triple jackpot, and the
-free rampart guards belong to nobody, so their kills pay everybody. Wave-clear
-and call-in-early bonuses are paid to every player, but each player's share is
-scaled by the threat they actually carry (`partyScale ÷ players`), so a squad of
-four does not collect four bonuses against one wave.
+**Gold is split by damage dealt** — each kill pays every player in proportion to
+what their guns actually did to that enemy, with overkill discounted and the
+guards' share spread evenly. Bounties swing ±35% with an 8% chance of a triple
+jackpot. Wave-clear and call-in-early bonuses go to every player, each scaled by
+the threat they actually carry (`partyScale ÷ players`), so a squad of four does
+not collect four bonuses against one wave. See [Gold](#gold) for the detail.
 
 **Your turret allowance shrinks as the party grows** — see
 [the turret allowance](#the-turret-allowance). More players means a bigger

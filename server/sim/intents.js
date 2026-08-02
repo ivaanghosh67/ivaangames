@@ -81,7 +81,7 @@ export function applyIntent(sim, seat, msg) {
       if (!sim.spend(seat, cost)) return { ok:false, why:'need ' + cost + 'g' };
       const t = {
         id:sim.id(), type:k, c, r, x:c * TS + TS / 2, y:r * TS + TS / 2,
-        lvl:1, cd:0, a:-Math.PI / 2, kills:0, spent:cost,
+        lvl:1, cd:0, a:-Math.PI / 2, kills:0, dmgDone:0, spent:cost,
         flash:0, spin:0, swingDir:1, ramp:0, buff:1, owner:seat,
       };
       G.towers.push(t);
@@ -99,7 +99,7 @@ export function applyIntent(sim, seat, msg) {
       if (!sim.spend(seat, D.cost)) return { ok:false, why:'need ' + D.cost + 'g' };
       const b = {
         id:sim.id(), kind:k, x, y, rx:x, ry:y, lvl:1, hp:D.hp, cd:0, a:-Math.PI / 2,
-        kills:0, spent:D.cost, flash:0, dead:false, respawn:0, swingDir:1, owner:seat,
+        kills:0, dmgDone:0, spent:D.cost, flash:0, dead:false, respawn:0, swingDir:1, owner:seat,
       };
       G.bots.push(b);
       sim.burst(x, y, D.color, 14, 110);
