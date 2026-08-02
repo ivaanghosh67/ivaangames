@@ -26,7 +26,7 @@ open it. The whole single-player game is in that one file.
 - [The board](#the-board) · [Lives](#lives) · [Gold](#gold)
 - [Difficulty](#difficulty) · [Waves](#waves) · [Enemies](#enemies)
 - [Towers](#towers) · [Bots](#bots) · [Medical](#medical)
-- [Upgrading and selling](#upgrading-and-selling)
+- [Upgrading and selling](#upgrading-and-selling) · [The turret allowance](#the-turret-allowance)
 - [How to get better](#how-to-get-better) · [What unlocks when](#what-unlocks-when)
 - [Quests](#quests-unlocking-the-heavy-weapons)
 - [Multiplayer rules](#multiplayer-rules)
@@ -318,6 +318,17 @@ by selecting one and clicking open ground.
 - **Squad limit.** 6 bots at once, **+2 per extra player**, **+1 every 15 waves**.
 - **Body-blocking.** A Blade Bot stops ground enemies in their tracks and trades
   blows. This is the single best way to buy time on a leaking lane.
+- **Enemies hit harder every wave.** Melee damage scales with `√(hpScale)` —
+  about **2.9× at wave 10, 6.1× at wave 25, 13.8× at wave 60**. A bot is a speed
+  bump you rotate, not a wall you install once.
+
+  > This used to be a flat constant for the entire game, and it was the single
+  > biggest reason the late game had no teeth. A wave-60 boss shoved a Blade Bot
+  > for the same 75 damage a second as a wave-5 boss, while the bot was level 10
+  > with a Medic topping it up — so the arithmetic never closed and a blocking
+  > bot became permanently unkillable. Measured: a maxed board took **zero leaks
+  > all the way to wave 120**. Delete the bots from that same board and it
+  > started leaking at wave 60. The bots were the whole story.
 - **Self-repair.** Out of combat (no enemy within 165), a bot heals 5% of its max
   health per second.
 - **Respawn.** A destroyed bot returns after **9 seconds** at the spot you last
@@ -332,9 +343,14 @@ by selecting one and clicking open ground.
 |---|---:|---|
 | 🩹 **Bandage** | 35 | +3 lives |
 | 🧰 **Medkit** | 90 | +9 lives |
+| 📜 **Build Permit** | 3,000 | +1 turret slot (see [the allowance](#the-turret-allowance)) |
 
-**Every purchase raises the price by 8%**, permanently for that run. Buying
-lives is an emergency measure, not a strategy. Cap is 45 lives.
+**Every medical purchase raises that item's price by 18%**, permanently for that
+run. Buying lives is an emergency measure, not a strategy — at 1.08 a purchase a
+rich player simply bought their lives back, and one real run regenerated from 13
+lives to 45 while ignoring leaks entirely. Cap is 45 lives.
+
+Permits escalate faster still, at **2.1× each**.
 
 ---
 
@@ -366,6 +382,65 @@ Everything can be upgraded to **level 10**.
 
 **Selling** returns **60% of everything you have put into a unit**, purchase
 price plus every upgrade. Recalling a bot works the same way.
+
+---
+
+## The turret allowance
+
+Each player may only have so many turrets standing at once. The current figure
+is shown as **Turrets n / cap** in the top bar and turns red when you are full.
+
+The allowance **grows with the wave** (+1 every 8 waves) and **shrinks with the
+party size** — the road is the same length however many people are defending it.
+
+| Party | Opening | Late game | Party total |
+|---|---:|---:|---:|
+| Solo | 12 | 18 | 18 |
+| Duo | 8 each | 13 each | 26 |
+| Trio | 7 each | 10 each | 30 |
+| Squad of four | 6 each | 9 each | 36 |
+
+The opening allowance is deliberately more than 250 starting gold can buy, so
+the early game plays exactly as it always did. The limit only bites later —
+which is precisely where the game had stopped being one.
+
+### Why the limit exists
+
+Escalating build prices were supposed to discourage sprawl on their own. They
+did not, and the telemetry says why: a real 2-player run banked **217,040 and
+462,110 gold** by wave 100. At that kind of money, a 40× price multiplier on a
+40-gold pistol is pocket change. That pair finished on **112 turrets** and took
+**zero leaks for the last 56 waves straight**, with lives pinned at maximum and
+a board that had not changed since wave 60.
+
+A price cannot bound a quantity when income is unbounded. Only a limit can.
+
+Measured against a best-case board of maxed top-tier guns, the failure point now
+lands where it belongs — at the end of the campaign, not never:
+
+| Party | Board | First leak |
+|---|---:|---:|
+| Solo (50 waves) | 16 turrets | wave 80 — comfortably winnable |
+| Duo (100 waves) | 22 turrets | wave 90 |
+| Trio (100 waves) | 27 turrets | wave 100 |
+| Squad (100 waves) | 32 turrets | wave 100 |
+
+### 📜 Build Permits
+
+A hard limit fixes the difficulty but leaves gold with nowhere to go, and dead
+currency from wave 40 on is its own kind of broken — every kill stops meaning
+anything. So the limit is a price, not a wall.
+
+A **Build Permit** buys one extra turret slot. It lives in the Medical panel and
+costs **3,000 gold**, with every subsequent permit costing **2.1× the last**:
+
+| Permit | 1st | 2nd | 3rd | 4th | 5th | 6th | 7th |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Cost | 3,000 | 6,300 | 13,230 | 27,783 | 58,344 | 122,523 | 257,299 |
+
+The sequence bounds itself. Six permits together cost 231,000 gold, and a
+seventh alone costs more than most runs ever earn. A rich player buys a handful
+of extra guns — not another fifty.
 
 ---
 
@@ -473,7 +548,7 @@ Everyone shares one battlefield. What is shared and what is yours:
 | | |
 |---|---|
 | **Shared** | The map, the wave, **lives**, the squad limit, the auto-wave setting |
-| **Yours alone** | **Your gold**, your turrets and bots, your quest unlocks |
+| **Yours alone** | **Your gold**, your turrets and bots, **your turret allowance**, your quest unlocks |
 
 **Ownership.** Anyone can build anywhere, but **only the owner can upgrade or
 sell their own units**. Your gold pays for your line; nobody can cash out your
@@ -481,6 +556,17 @@ investment or spend your money.
 
 **Kills are tracked per player** and shown on the scoreboard, so there are
 bragging rights even though you win or lose together.
+
+**Gold goes to the gun that lands the killing blow** — specifically, to that
+gun's owner. Bounties swing ±35% with an 8% chance of a triple jackpot, and the
+free rampart guards belong to nobody, so their kills pay everybody. Wave-clear
+and call-in-early bonuses are paid to every player, but each player's share is
+scaled by the threat they actually carry (`partyScale ÷ players`), so a squad of
+four does not collect four bonuses against one wave.
+
+**Your turret allowance shrinks as the party grows** — see
+[the turret allowance](#the-turret-allowance). More players means a bigger
+fight, not an easier one.
 
 **Seats.** Party size is fixed when the run starts, so a player going quiet never
 reshuffles anyone else's game. Seat 1 is the host.

@@ -197,6 +197,28 @@ export const lateHp = n => 1 + Math.max(0, n - 25) * 0.12;
 export const lateCount = n => 1 + Math.max(0, n - 25) * 0.02;
 
 /**
+ * How hard an enemy hits the thing standing in front of it.
+ *
+ * This was the real reason the late game had no teeth. Enemy *health* grows
+ * quadratically with the wave, but their melee damage was a flat constant for
+ * the whole game — a wave-60 boss shoved a Blade Bot for exactly the same 75
+ * damage a second as a wave-5 boss did. Meanwhile the bot is level 10 with a
+ * Medic Bot topping it up. The arithmetic never closes: a blocking bot becomes
+ * permanently unkillable, enemies queue up behind it forever, and nothing
+ * reaches the flag no matter how far you play.
+ *
+ * Measured: a maxed board took zero leaks all the way to wave 120. Delete the
+ * bots from that same board and it starts leaking at wave 60 — the bots were
+ * the whole story.
+ *
+ * Damage now grows as the square root of health, so a bot is a speed bump you
+ * rotate rather than a wall you install once. The root keeps early game intact
+ * (a wave-5 boss is barely changed) while wave 60 hits about 14× harder, which
+ * is past what a Medic can sustain.
+ */
+export const meleeScale = n => Math.sqrt(hpScale(n));
+
+/**
  * Endless mode: keep going past the final wave instead of winning.
  *
  * The existing curve is quadratic in the wave number, so it escalates on its
@@ -302,6 +324,64 @@ export const BUILD_CAP = 40;
 export const buildMul = owned =>
   Math.min(BUILD_CAP, Math.pow(BUILD_STEP, Math.max(0, owned - BUILD_FREE)));
 export const buildCostOf = (def, owned) => Math.round(def.cost * buildMul(owned));
+
+/**
+ * How many turrets one player may have standing.
+ *
+ * Escalating prices were supposed to stop sprawl on their own. They did not,
+ * and the telemetry says why: a real 2-player run banked 217,040 and 462,110
+ * gold by wave 100. At that kind of money a 40× price multiplier on a 40-gold
+ * pistol is still pocket change, so the pair ended on 112 turrets and took
+ * ZERO leaks for the last 56 waves straight. Lives sat at maximum. The board
+ * had not changed since wave 60 because there was nothing left to decide.
+ *
+ * Price pressure cannot bound a quantity when income is unbounded — only a
+ * limit can. Measured on a best-case board of maxed top-tier guns: 24 turrets
+ * breaks at wave 90, 32 breaks at wave 100, 40 never breaks at all. So a duo
+ * allowance landing near 32 total puts the failure point right at the end of
+ * the campaign, which is where it belongs — you should finish only just
+ * holding on.
+ *
+ * The allowance opens at 10, which no opening can afford anyway (250 starting
+ * gold buys six pistols), so the early game is untouched. It only binds late,
+ * which is precisely where the game had stopped being one.
+ */
+export const TOWER_CAP_BASE = 12;
+export const TOWER_CAP_STEP = 8;    // +1 allowance every 8 waves
+export const TOWER_CAP_MAX  = 18;
+export const TOWER_CAP_MIN  = 6;    // never so few that a seat has no say
+/**
+ * The allowance shrinks as the squad grows, because the road is the same length
+ * however many people are defending it. Measured: a *total* board near 26 maxed
+ * turrets puts the failure point right at the end of the campaign. A flat
+ * per-player allowance blew straight past that — four players fielding 52
+ * turrets sailed through wave 100 untouched, which is the same no-fail-state
+ * problem in a new costume. Dividing by the root of the party size holds the
+ * total near that mark while still giving every seat a real share to command.
+ *
+ *   solo 12→18 · duo 8→13 each (26) · trio 7→10 each (30) · squad 6→9 each (36)
+ */
+export const towerCapOf = (wave, players = 1) => Math.max(TOWER_CAP_MIN, Math.round(
+  Math.min(TOWER_CAP_MAX, TOWER_CAP_BASE + Math.floor(Math.max(0, wave) / TOWER_CAP_STEP))
+  / Math.sqrt(clamp(players | 0, 1, 4))));
+
+/**
+ * Build permits — one extra turret slot, at a price that compounds.
+ *
+ * A hard limit on turrets fixes the difficulty, but it leaves gold with
+ * nowhere to go: the same run that ended on 462,110 gold would only bank it
+ * faster once there is nothing left to buy. Dead currency from wave 40 on is
+ * its own kind of broken — every kill stops meaning anything.
+ *
+ * So the limit is a price, not a wall. Surplus gold converts back into the one
+ * thing that is actually scarce, and because each permit costs 2.1× the last,
+ * the sequence bounds itself: at 3,000 to start, six permits cost 231,000
+ * altogether and a seventh alone costs more than a whole run earns. A rich
+ * player buys a handful of extra guns, not another fifty.
+ */
+export const PERMIT_BASE = 3000;
+export const PERMIT_STEP = 2.1;
+export const permitCostOf = bought => Math.round(PERMIT_BASE * Math.pow(PERMIT_STEP, Math.max(0, bought)));
 // Medical prices climb harder than they used to. At 1.08 a purchase, a rich
 // late-game player simply bought their lives back — one real run regenerated
 // from 13 lives to 45 while ignoring leaks entirely, which removed the only

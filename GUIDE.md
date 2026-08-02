@@ -116,12 +116,36 @@ you want it to go.
 
 ---
 
+## You only get so many turrets
+
+There is a limit on how many turrets **you personally** can have standing, shown
+as **Turrets 7 / 12** at the top of the screen. It goes up as the waves go by,
+and it goes down the more people are playing — the road is the same length
+however many of you are defending it.
+
+| Playing | You start with | By late game |
+|---|---:|---:|
+| On your own | 12 | 18 |
+| Two players | 8 each | 13 each |
+| Three players | 7 each | 10 each |
+| Four players | 6 each | 9 each |
+
+This is the single most important rule to understand, because it means **you
+cannot win by building more stuff**. You win by making the guns you have better.
+
+If you are rich and really want another slot, buy a **📜 Build Permit** from the
+Medical panel. The first costs 3,000 gold and each one after that costs about
+twice the last, so it is a way to spend a fortune, not a way around the limit.
+
+---
+
 ## Five tips that actually help
 
 **1. Upgrade instead of building more.**
-This is the big one. Every level makes a gun **46% stronger**, and it stacks up
-fast — a level 10 pistol hits about **33 times harder** than a level 1. Three
-strong guns beat nine weak ones for the same gold. Not close.
+This is the big one, and the turret limit above is there to force it. Every
+level makes a gun **46% stronger**, and it stacks up fast — a level 10 pistol
+hits about **33 times harder** than a level 1. Three strong guns beat nine weak
+ones for the same gold. Not close.
 
 **2. Build on corners.**
 Where the road bends back on itself, one gun covers the enemy **twice**. Corners
@@ -137,6 +161,11 @@ Flyers ignore the road. If every gun is in one place, they'll fly past.
 **5. Buy a Blade Bot before the first boss.**
 It body-blocks the boss and holds it still while your guns work. 125 gold to
 stop a boss in its tracks is a bargain.
+
+But don't plant one and forget it. Enemies hit **much** harder in later waves,
+so a bot that held the line forever at wave 10 gets flattened at wave 50. Later
+on a Blade Bot buys you seconds, not safety — keep a Medic Bot near it and
+expect to replace it.
 
 ---
 

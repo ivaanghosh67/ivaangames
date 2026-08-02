@@ -70,6 +70,15 @@ function checkSim(sim, ctx, partySize) {
   }
   if (G.bots.length > sim.maxSquads())
     violate(ctx, 'squad cap exceeded', `${G.bots.length} > ${sim.maxSquads()}`);
+  // The turret allowance is the one thing standing between the late game and
+  // the state the telemetry caught it in: 112 turrets on the board and not a
+  // single leak for the last 56 waves of a real run. If this ever stops
+  // holding, the game quietly stops having a fail state again.
+  for (let s = 1; s <= partySize; s++) {
+    const owned = G.towers.reduce((n, t) => n + (t.owner === s ? 1 : 0), 0);
+    const cap = sim.towerCap(s);
+    if (owned > cap) violate(ctx, 'turret allowance exceeded', `seat ${s}: ${owned} > ${cap}`);
+  }
 
   const path = sim.map.path, air = sim.map.airpath;
   for (const e of G.enemies) {
@@ -140,6 +149,12 @@ function makeStrategy(sim, seat, partySize, rnd) {
     }
     // 2. build out to a solid footprint before upgrading
     const wantTowers = 5 + Math.floor(G.wave / 2);
+    // At the allowance with money to burn, buy room rather than sit on gold —
+    // this is the path a rich late-game player takes, so it needs exercising.
+    if (mineT.length >= sim.towerCap(seat) && gold > sim.permitCost(seat) * 2) {
+      applyIntent(sim, seat, { a: 'permit' });
+      return;
+    }
     if (towerKeys.length && mineT.length < wantTowers) {
       for (const k of towerKeys) {
         if (TOWERS[k].cost > gold) continue;

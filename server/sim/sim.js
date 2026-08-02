@@ -20,7 +20,7 @@ import {
   clamp, dist, TOWERS, BOTS, HEALS, ENEMIES, TKEYS, BKEYS,
   hpScale, bossHp, goldScale, armorOf, waveDef, statsOf, botStats,
   kitOf, canUse, upCostOf, healCostOf, PCOL,
-  diffOf, partyScale, bossRamp, ENDLESS_CAP, lateHp,
+  diffOf, partyScale, bossRamp, ENDLESS_CAP, lateHp, meleeScale, towerCapOf, permitCostOf,
 } from './constants.js';
 import { makeRng } from './rng.js';
 import { loadMap, pickMap } from './map.js';
@@ -85,6 +85,13 @@ export class Sim {
       (Array.isArray(list) ? list : []).filter(k => TOWERS[k] && TOWERS[k].lock));
   }
   maxSquads() { return BASE_SQUADS + (this.players - 1) * 2 + Math.floor(this.G.wave / 15); }
+  // Per player, not per room — each seat gets its own allowance, so a party
+  // still fields more guns than a solo player, in step with the bigger waves.
+  // Permits this seat has bought add to it.
+  towerCap(seat) {
+    return towerCapOf(this.G.wave, this.players) + (this.G.permits[seat] || 0);
+  }
+  permitCost(seat) { return permitCostOf(this.G.permits[seat] || 0); }
   upCost(u) { return upCostOf(defOf(u), u.lvl); }
   healCost(k) { return healCostOf(k, this.G.healBuys[k]); }
 
@@ -111,6 +118,8 @@ export class Sim {
       spawnQ:[], spawnT:0, spawning:false, prep:15, waveActive:false,
       over:false, won:false, t:0, shake:0,
       healBuys:{ bandage:0, medkit:0 }, leaked:0, killed:0,
+      // Extra turret slots each seat has bought, at a compounding price.
+      permits:{ 1:0, 2:0, 3:0, 4:0 },
       players:this.players, score:{ 1:0, 2:0, 3:0, 4:0 },
       // Cheats are not reachable over the wire; the object exists only so the
       // ported formulas below read identically to the original.
@@ -198,7 +207,8 @@ export class Sim {
     G.enemies.push({
       id:this.id(), type, x:p[0].x, y:p[0].y, wp:1, hp, maxhp:hp,
       speed:b.speed * (type === 'boss' ? 1 : (.94 + rnd() * .12)),
-      armor:armorOf(b.armor, G.wave), r:b.r, fly:b.fly, dps:b.dps,
+      armor:armorOf(b.armor, G.wave), r:b.r, fly:b.fly,
+      dps:b.dps * meleeScale(G.wave),
       gold:Math.round(b.gold * goldScale(G.wave)),
       slowT:0, slowF:1, prog:0, angle:0, hit:0, block:null,
     });

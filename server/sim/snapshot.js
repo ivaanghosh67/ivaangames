@@ -125,6 +125,9 @@ export function encodeSnapshot(sim, tick) {
     // How many turrets each seat owns — the shop needs it to show the real,
     // escalated price rather than the base one.
     tc: [1, 2, 3, 4].map(s2 => G.towers.reduce((n, t) => n + (t.owner === s2 ? 1 : 0), 0)),
+    // Build permits bought per seat. The allowance and the next permit's price
+    // both depend on it, so the client cannot show either without it.
+    pm: [G.permits[1], G.permits[2], G.permits[3], G.permits[4]],
     // Per-seat quest progress for this run: [flyerKills, bossKills] × 4.
     // Clients add the delta to their saved totals and unlock accordingly.
     qp: [1, 2, 3, 4].flatMap(s => [G.quest[s].flyerKills, G.quest[s].bossKills]),

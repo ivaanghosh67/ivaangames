@@ -227,6 +227,13 @@ async function main() {
     await sleep(200);
   }
 
+  // ── the turret allowance is on the wire ──
+  // Enforcement itself is an invariant checked across every deep-sim run; here
+  // we only confirm the client is told what it needs to show the limit.
+  ok(Array.isArray(host.last.s.s.pm) && host.last.s.s.pm.length === 4,
+    'per-seat build permits are on the wire');
+  ok(host.last.s.s.pm.every(v => v === 0), 'and nobody starts with one');
+
   // ── quests gate the heavy weapons, per seat ──
   host.send({ type: 'i', a: 'build', k: 'plasma', c: 12, r: 9 });
   const qDeny = await host.wait('deny');

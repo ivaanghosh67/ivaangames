@@ -260,6 +260,8 @@
       <div class="sep"></div>
       <div class="stat"><small>Wave</small><span id="sWave">0 / 50</span></div>
       <div class="sep"></div>
+      <div class="stat"><small>Turrets</small><span id="sTurret" style="color:#9fd8ff">0 / 10</span></div>
+      <div class="sep"></div>
       <div class="stat"><small>Squads</small><span id="sSquad" style="color:#9fd8ff">0 / 6</span></div>
       <div class="sep" id="scoreSep" style="display:none"></div>
       <div class="stat" id="scoreBox" style="display:none">
@@ -804,6 +806,15 @@ let WAVECAP=MAXWAVE;
 let ENDLESS=false, CAMPAIGN=MAXWAVE;
 const hpScale = n => 1 + .36*(n-1) + .048*(n-1)*(n-1);
 const bossHp  = n => 800 * hpScale(n) * 1.5;
+// How hard an enemy hits whatever is standing in front of it. Enemy health grew
+// quadratically with the wave but their melee damage was a flat constant, so a
+// wave-60 boss shoved a Blade Bot for the same 75 dps as a wave-5 one — while
+// the bot was level 10 with a Medic topping it up. A blocking bot became
+// permanently unkillable and nothing ever reached the flag. Measured: a maxed
+// board took zero leaks to wave 120; remove its bots and it broke at wave 60.
+// Damage now grows as the root of health, so a bot is a speed bump you rotate
+// rather than a wall you install once. MUST match server/sim/constants.js.
+const meleeScale = n => Math.sqrt(hpScale(n));
 const goldScale = n => 1 + .04*(n-1);
 const armorOf = (base,n) => base + Math.floor(n/6);
 
@@ -872,6 +883,7 @@ function newGame(){
       texts:[], zaps:[], swings:[], spawnQ:[], spawnT:0, spawning:false, prep:15,
       waveActive:false, over:false, won:false, sel:null, place:null, paused:false,
       speed:1, slowmo:false, shake:0, t:0, healBuys:{bandage:0,medkit:0}, leaked:0, killed:0,
+      permits:{1:0,2:0,3:0,4:0},   // extra turret slots bought, per seat
       players:PLAYERS, score:{1:0,2:0,3:0,4:0},
       admin:{free:false,god:false,ranges:false,hpMul:1,squadBonus:0,infAmmo:false,noKick:false,gunMul:1,magMul:1,refill:false,instaload:false,flyMul:1,ceiling:430,hover:false,airJumps:2},
       chests:[], map:MAPNAME, ultraWarned:false,
@@ -897,6 +909,28 @@ const myTowerCount=()=>NET.active
   ? ((NET.towerCounts||[])[MYSEAT-1]||0)
   : G.towers.filter(t=>t.owner===MYSEAT).length;
 const buildCost=k=>TOWERS[k]?Math.round(TOWERS[k].cost*buildMul(myTowerCount())):(BOTS[k]?BOTS[k].cost:0);
+// How many turrets one player may have standing. Price pressure alone could not
+// bound sprawl: a real duo banked 217k/462k gold by wave 100, ended on 112
+// turrets and took zero leaks for the last 56 waves. Money is no limit when
+// income is unbounded, so this is a limit. Opens at 10 — more than the 250
+// starting gold can buy — so the opening is untouched and it only bites late.
+// MUST match server/sim/constants.js.
+// The allowance also shrinks as the squad grows — the road is the same length
+// however many people defend it, and four players on a flat allowance fielded
+// 52 turrets and sailed through wave 100 untouched.
+//   solo 12→18 · duo 8→13 each · trio 7→10 each · squad 6→9 each
+const TOWER_CAP_BASE=12, TOWER_CAP_STEP=8, TOWER_CAP_MAX=18, TOWER_CAP_MIN=6;
+const towerCapOf=(w,players)=>Math.max(TOWER_CAP_MIN,Math.round(
+  Math.min(TOWER_CAP_MAX,TOWER_CAP_BASE+Math.floor(Math.max(0,w)/TOWER_CAP_STEP))
+  /Math.sqrt(Math.min(4,Math.max(1,players|0)))));
+// Permits buy one extra slot each, at a price that compounds 2.1× a time — so
+// surplus gold has somewhere to go without reopening the door to sprawl.
+// MUST match server/sim/constants.js.
+const PERMIT_BASE=3000, PERMIT_STEP=2.1;
+const permitCostOf=bought=>Math.round(PERMIT_BASE*Math.pow(PERMIT_STEP,Math.max(0,bought)));
+const myPermits=()=>(G.permits&&G.permits[MYSEAT])||0;
+const permitCost=()=>permitCostOf(myPermits());
+const towerCap=()=>towerCapOf(G.wave,G.players||PLAYERS||1)+myPermits();
 const healCost=k=>Math.round(HEALS[k].cost*Math.pow(1.18,G.healBuys[k]));
 
 function statsOf(type,lvl){
@@ -947,7 +981,7 @@ function spawn(type){
   const p=b.fly?AIRPATH:PATH;
   G.enemies.push({type,x:p[0].x,y:p[0].y,wp:1,hp,maxhp:hp,
     speed:b.speed*(type==='boss'?1:(.94+Math.random()*.12)),
-    armor:armorOf(b.armor,G.wave), r:b.r, fly:b.fly, dps:b.dps,
+    armor:armorOf(b.armor,G.wave), r:b.r, fly:b.fly, dps:b.dps*meleeScale(G.wave),
     gold:Math.round(b.gold*goldScale(G.wave)),slowT:0,slowF:1,prog:0,angle:0,hit:0,block:null});
 }
 
@@ -1797,7 +1831,7 @@ function draw3DGL(){
   let ghostOK=false;
   if(G.place&&FP.mode==='build'&&ac>=0&&ac<COLS&&ar>=0&&ar<ROWS){
     const isB=!!BOTS[G.place];
-    ghostOK=(isB?G.bots.length<maxSquads():canBuild(ac,ar))&&
+    ghostOK=(isB?G.bots.length<maxSquads():(canBuild(ac,ar)&&myTowerCount()<towerCap()))&&
             (G.admin.free||G.gold>=(isB?BOTS[G.place]:TOWERS[G.place]).cost);
     mat('flat',0,0,4,1);
     gl.depthMask(false);
@@ -2450,7 +2484,7 @@ function draw3D(){
   let ghostOK=false;
   if(G.place&&ac>=0&&ac<COLS&&ar>=0&&ar<ROWS){
     const isB=!!BOTS[G.place];
-    ghostOK = isB ? (G.bots.length<maxSquads()) : canBuild(ac,ar);
+    ghostOK = isB ? (G.bots.length<maxSquads()) : (canBuild(ac,ar)&&myTowerCount()<towerCap());
     const afford=G.admin.free||G.gold>=(isB?BOTS[G.place]:TOWERS[G.place]).cost;
     ghostOK=ghostOK&&afford;
     const q=quadToScreen([[ac*TS,ar*TS],[ac*TS+TS,ar*TS],[ac*TS+TS,ar*TS+TS],[ac*TS,ar*TS+TS]]);
@@ -3173,7 +3207,7 @@ function drawCursors(){
     const col=PCOL[pl], x=cur.c*TS, y=cur.r*TS, cx=x+TS/2, cy=y+TS/2;
     const isBotU=!!BOTS[k];
     const rng=isBotU?botStats(k,1).range:statsOf(k,1).range;
-    const ok=isBotU ? (G.bots.length<maxSquads()) : canBuild(cur.c,cur.r);
+    const ok=isBotU ? (G.bots.length<maxSquads()) : (canBuild(cur.c,cur.r)&&myTowerCount()<towerCap());
     const afford=G.gold>=(isBotU?BOTS[k]:TOWERS[k]).cost;
     ctx.globalAlpha=.9;
     ctx.strokeStyle=col; ctx.lineWidth=2;
@@ -3403,6 +3437,11 @@ function makeCard(parent,key,T,price,onclick){
 TKEYS.forEach(k=>makeCard(TOWERS[k].cat==='gun'?$('shopGun'):$('shopSword'),k,TOWERS[k],TOWERS[k].cost,()=>pick(k)));
 BKEYS.forEach(k=>makeCard($('shopBot'),k,BOTS[k],BOTS[k].cost,()=>pick(k)));
 Object.keys(HEALS).forEach(k=>makeCard($('shopHeal'),k,HEALS[k],HEALS[k].cost,()=>buyHeal(k)));
+// A build permit: one more turret slot, at a price that compounds. Without it,
+// gold stops meaning anything the moment your allowance is full.
+const PERMIT_DEF={name:'Build Permit',glyph:'📜',color:'#9fd8ff',
+  desc:'One more turret slot · price doubles each time'};
+const permitCard=makeCard($('shopHeal'),'permit',PERMIT_DEF,PERMIT_BASE,()=>buyPermit());
 $('maxL').textContent=MAXLIVES;
 
 function pick(k){
@@ -3422,7 +3461,10 @@ function pick(k){
 function buildTower(k,c,r,owner,px,py){
   if(!unlocked(k)){ pop(px,py,'🔒 locked','#e5534b'); return null; }
   if(!canBuild(c,r)){ pop(px,py,'blocked','#e5534b'); return null; }
-  const cost=Math.round(TOWERS[k].cost*buildMul(G.towers.filter(t=>t.owner===owner).length));
+  const owned=G.towers.filter(t=>t.owner===owner).length, cap=towerCap();
+  if(owned>=cap){
+    pop(px,py,'turret limit '+cap+' — sell one, or upgrade','#e5534b'); return null; }
+  const cost=Math.round(TOWERS[k].cost*buildMul(owned));
   if(!spend(cost)){ pop(px,py,'need '+cost+'g','#e5534b'); return null; }
   const t={type:k,c,r,x:c*TS+TS/2,y:r*TS+TS/2,lvl:1,cd:0,a:-Math.PI/2,
     kills:0,spent:cost,flash:0,spin:0,swingDir:1,ramp:0,owner};
@@ -3452,6 +3494,16 @@ function buyHeal(k){
   burst(W/2,120,Hh.color,16,140);
   syncUI();
 }
+function buyPermit(){
+  if(G.over) return;
+  if(NET.active){ intent({a:'permit'}); return; }
+  const c=permitCost();
+  if(!spend(c)){ pop(W/2,120,'need '+c+'g','#e5534b'); return; }
+  G.permits[MYSEAT]=myPermits()+1;
+  pop(W/2,120,'📜 turret slot '+towerCap(),'#9fd8ff');
+  burst(W/2,120,'#9fd8ff',16,140);
+  syncUI();
+}
 
 function syncUI(){
   if(!G) return;
@@ -3462,6 +3514,11 @@ function syncUI(){
   const cap=maxSquads();
   $('sSquad').textContent=G.bots.length+' / '+(cap===Infinity?'∞':cap);
   $('sSquad').style.color=G.bots.length>=maxSquads()?'#e5534b':'#9fd8ff';
+  // Your own turret allowance — the limit is per player, so show your count,
+  // not the room's. Turning red is the cue to upgrade instead of sprawl.
+  const tcap=towerCap(), mine=myTowerCount();
+  $('sTurret').textContent=mine+' / '+tcap;
+  $('sTurret').style.color=mine>=tcap?'#e5534b':'#9fd8ff';
   const multi=G.players>1;
   $('scoreSep').style.display=multi?'':'none';
   $('scoreBox').style.display=multi?'':'none';
@@ -3508,6 +3565,16 @@ function syncUI(){
       : price>d.cost ? price+'g ↑' : price+'g';
   }
   for(const el of $('shopHeal').children){
+    // The permit sits in the same panel but is not a medical item: it is never
+    // disabled by full lives, and its price tracks permits rather than heals.
+    if(el.dataset.k==='permit'){
+      const c=permitCost();
+      el.querySelector('.pr').textContent=c+'g';
+      el.querySelector('.ds').textContent='Turret slot '+(towerCap()+1)+' · price doubles each time';
+      el.classList.toggle('poor',G.gold<c);
+      el.disabled=false;
+      continue;
+    }
     const c=healCost(el.dataset.k);
     el.querySelector('.pr').textContent=c+'g';
     el.classList.toggle('poor',G.gold<c);
@@ -4593,6 +4660,7 @@ function netSnapshot(s){
   G.spawnQ.length=s.q;                             // only the count matters to the UI
   if(s.hb){ G.healBuys.bandage=s.hb[0]; G.healBuys.medkit=s.hb[1]; }
   if(s.tc) NET.towerCounts=s.tc;
+  if(s.pm) G.permits={1:s.pm[0],2:s.pm[1],3:s.pm[2],4:s.pm[3]};
 
   // Quest progress. The server sends this run's per-seat totals; we fold the
   // DELTA into our saved figures. The baseline is seeded from the first
@@ -5104,7 +5172,8 @@ setInterval(()=>{
 },250);
 window.__G=()=>G; window.__FP=FP; window.__GL=()=>GL; window.__NET=NET; window.__tutStart=tutStart; window.__tutEnd=tutEnd; window.__SFX=SFX; window.__SOUND=SOUND;
 window.__sfxInit=sfxInit; window.__sfxVolume=sfxVolume; window.__sfxAllow=sfxAllow;
-window.__T={unlockSecret,gunList,rayPierce,CKEYS,WAY:()=>WAY,PATH:()=>PATH,loadMap,MAPS,randomMap,blocked:()=>blocked,KEEP,THEMES,theme:()=>THEME,topDownFire,hurt,fpFire,useChest,magOf,waveDef,deployBot,buildTower,statsOf,botStats,spawn,kill,startReload,CARRY,TOWERS,BOTS,ENEMIES,hpScale,bossHp,maxSquads,selectSlot,cycleSlot}; Object.defineProperty(window,'__fps',{get:()=>fps});
+window.__T={unlockSecret,gunList,rayPierce,CKEYS,WAY:()=>WAY,PATH:()=>PATH,loadMap,MAPS,randomMap,blocked:()=>blocked,KEEP,THEMES,theme:()=>THEME,topDownFire,hurt,fpFire,useChest,magOf,waveDef,deployBot,buildTower,statsOf,botStats,spawn,kill,startReload,CARRY,TOWERS,BOTS,ENEMIES,hpScale,bossHp,maxSquads,selectSlot,cycleSlot,
+  towerCapOf,towerCap,permitCost,permitCostOf,buyPermit,meleeScale}; Object.defineProperty(window,'__fps',{get:()=>fps});
 })();
 </script>
 </body>

@@ -69,8 +69,14 @@ export function applyIntent(sim, seat, msg) {
       if (!sim.isUnlocked(k, seat)) return { ok:false, why:'🔒 finish its quest to unlock' };
       const c = msg.c | 0, r = msg.r | 0;
       if (!sim.canBuild(c, r)) return { ok:false, why:'blocked' };
-      // Price rises with how many turrets this player already owns.
+      // Price rises with how many turrets this player already owns — and above
+      // the allowance there is no price at all, only a refusal. Money alone
+      // could never bound sprawl once a run banks six figures of gold.
       const owned = G.towers.reduce((n, t) => n + (t.owner === seat ? 1 : 0), 0);
+      const cap = sim.towerCap(seat);
+      if (owned >= cap) {
+        return { ok:false, why:`turret limit ${cap} — upgrade, or buy a permit` };
+      }
       const cost = buildCostOf(def, owned);
       if (!sim.spend(seat, cost)) return { ok:false, why:'need ' + cost + 'g' };
       const t = {
@@ -98,6 +104,16 @@ export function applyIntent(sim, seat, msg) {
       G.bots.push(b);
       sim.burst(x, y, D.color, 14, 110);
       return { ok:true, changed:true, id:b.id };
+    }
+
+    case 'permit': {
+      // Turn surplus gold back into the only scarce thing: room on the board.
+      // The price compounds, so this tops a rich player up by a handful of
+      // guns rather than reopening the door to unlimited sprawl.
+      const c = sim.permitCost(seat);
+      if (!sim.spend(seat, c)) return { ok:false, why:'need ' + c + 'g' };
+      G.permits[seat] = (G.permits[seat] || 0) + 1;
+      return { ok:true, changed:true };
     }
 
     case 'upgrade': {
