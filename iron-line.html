@@ -122,6 +122,90 @@
   kbd{background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;font:inherit;font-size:10px}
   #side::-webkit-scrollbar{width:8px}
   #side::-webkit-scrollbar-thumb{background:#2a3440;border-radius:4px}
+  /* ── quests ── */
+  .qst{display:flex;flex-direction:column;gap:3px;padding:6px 8px;border-radius:8px;
+    background:var(--panel2);border:1px solid var(--line);margin-bottom:5px}
+  .qst.done{border-color:#3a9e64;background:#1b2c22}
+  .qTop{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700}
+  .qTop .ic{font-family:"Segoe UI Emoji","Noto Color Emoji",sans-serif}
+  .qTop .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .qTop .pc{color:var(--dim);font-weight:600;font-size:10.5px}
+  .qst.done .pc{color:#6ee7a8}
+  .qDs{font-size:10px;color:var(--dim);line-height:1.35}
+  .qBar{height:4px;border-radius:3px;background:#0e141b;overflow:hidden}
+  .qBar i{display:block;height:100%;background:linear-gradient(90deg,#4aa8ff,#6ee7a8)}
+  .qst.done .qBar i{background:#3a9e64}
+  /* ── online co-op ── */
+  #online{position:absolute;inset:0;border-radius:10px;display:flex;overflow-y:auto;z-index:7;
+    background:radial-gradient(700px 420px at 50% 10%, #1b2836 0%, rgba(9,13,18,.985) 70%)}
+  #online.hide{display:none}
+  .onIn{margin:auto;flex:0 0 auto;padding:16px 20px;max-width:660px;width:100%}
+  #online h1{margin:0 0 2px;font-size:27px;letter-spacing:.14em;text-align:center;
+    text-shadow:0 0 26px rgba(74,168,255,.35)}
+  #online .tag{color:var(--dim);font-size:11.5px;text-align:center;margin-bottom:13px}
+  .onTabs{display:flex;gap:6px;margin-bottom:11px}
+  .onTabs button{flex:1;font-size:12px;padding:7px}
+  .onTabs button.on{border-color:var(--acc);background:#22334a;color:#fff}
+  .onPane{display:none;flex-direction:column;gap:9px}
+  .onPane.on{display:flex}
+  .fRow{display:flex;gap:8px;align-items:center}
+  .fRow label{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+    font-weight:700;flex:0 0 82px}
+  #online input,#online select{flex:1;min-width:0;font:inherit;font-size:13px;color:var(--ink);
+    background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+  #online input:focus,#online select:focus{outline:none;border-color:var(--acc)}
+  #joinCode{letter-spacing:.34em;text-transform:uppercase;font-weight:700;font-size:19px;text-align:center}
+  .chk{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--dim);cursor:pointer}
+  .chk input{flex:0 0 auto;width:15px;height:15px;accent-color:#4aa8ff}
+  #roomList{display:flex;flex-direction:column;gap:6px;max-height:210px;overflow-y:auto}
+  .rItem{display:flex;gap:10px;align-items:center;text-align:left;padding:8px 10px;width:100%}
+  .rItem .rc{font-weight:800;letter-spacing:.14em;color:var(--gold);font-size:13.5px}
+  .rItem .rn{font-weight:600;font-size:12.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rItem .rm{font-size:10.5px;color:var(--dim)}
+  .rItem .rp{font-size:11.5px;font-weight:700;color:#6ee7a8}
+  .empty{color:var(--dim);font-size:12px;text-align:center;padding:16px 0}
+  /* seat roster + chat, shown once you are in a room */
+  #roomBox{border:1px solid var(--line);border-radius:11px;padding:11px 13px;background:rgba(21,27,35,.72)}
+  .rHead{display:flex;align-items:baseline;gap:9px;margin-bottom:9px}
+  .rHead .code{font-size:25px;font-weight:800;letter-spacing:.3em;color:var(--gold)}
+  .rHead .lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:700}
+  #seatList{display:flex;flex-direction:column;gap:5px;margin-bottom:9px}
+  .seat{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:5px 8px;
+    background:var(--panel2);border:1px solid var(--line);border-radius:8px}
+  .seat .dot{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+  .seat .kit{margin-left:auto;font-size:10.5px;color:var(--dim)}
+  .seat.off{opacity:.45}
+  .seat.me{border-color:var(--acc)}
+  #chatLog{height:96px;overflow-y:auto;font-size:11.5px;line-height:1.6;background:#10161d;
+    border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-bottom:6px}
+  #chatLog b{font-weight:700}
+  #onErr{color:var(--hp);font-size:12px;min-height:16px;text-align:center}
+  #onNet{font-size:10.5px;color:var(--dim);text-align:center;margin-top:9px}
+  #onNet .up{color:#6ee7a8}
+  .onBtns{display:flex;gap:8px}
+  .onBtns button{flex:1}
+  /* in-game multiplayer chrome */
+  #mpBar{position:absolute;top:8px;right:8px;z-index:4;display:none;flex-direction:column;gap:5px;
+    align-items:flex-end;pointer-events:none}
+  #mpBar.on{display:flex}
+  .mpSeat{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+    background:rgba(13,17,23,.8);border:1px solid var(--line);border-radius:7px;padding:3px 8px}
+  .mpSeat .dot{width:8px;height:8px;border-radius:50%}
+  .mpSeat.off{opacity:.4}
+  #mpChat{position:absolute;left:8px;bottom:8px;z-index:4;width:290px;display:none}
+  #mpChat.on{display:block}
+  #mpLog{max-height:110px;overflow-y:auto;font-size:11px;line-height:1.55;
+    background:rgba(13,17,23,.72);border:1px solid var(--line);border-radius:8px;padding:5px 8px;
+    margin-bottom:4px}
+  #mpSay{width:100%;font:inherit;font-size:11.5px;color:var(--ink);background:rgba(13,17,23,.85);
+    border:1px solid var(--line);border-radius:7px;padding:5px 8px}
+  #mpSay:focus{outline:none;border-color:var(--acc)}
+  #netPill{position:absolute;top:8px;left:8px;z-index:4;display:none;align-items:center;gap:6px;
+    font-size:10.5px;color:var(--dim);background:rgba(13,17,23,.8);border:1px solid var(--line);
+    border-radius:7px;padding:3px 8px}
+  #netPill.on{display:flex}
+  #netPill .dot{width:7px;height:7px;border-radius:50%;background:#6ee7a8}
+  #netPill.bad .dot{background:var(--hp)}
 </style>
 </head>
 <body>
@@ -146,6 +230,7 @@
       <div class="grow"></div>
       <span id="sTimer" style="color:var(--dim);font-size:12px"></span>
       <button id="bMode">1 Player</button>
+      <button id="bNet" class="primary" title="Play online with friends on other computers">🌐 Online</button>
       <button id="bAdmin" title="Admin panel (~)">⚙</button>
       <button id="bFP" title="First-person view (V)">👁 1st person</button>
       <button id="bAuto" title="Auto-skip the countdown between waves">⏭ Auto</button>
@@ -231,9 +316,9 @@
             <button class="mode" data-m="1"><div class="mIco">🎯</div><div class="mNm">Solo</div>
               <div class="mDs">1 player · the whole arsenal</div></button>
             <button class="mode" data-m="2"><div class="mIco">🤝</div><div class="mNm">Duo</div>
-              <div class="mDs">2 players · guns vs steel</div></button>
+              <div class="mDs">2 players · both fully armed</div></button>
             <button class="mode" data-m="3"><div class="mIco">🛡</div><div class="mNm">Trio</div>
-              <div class="mDs">3 players · guns · swords · bots</div></button>
+              <div class="mDs">3 players · all fully armed</div></button>
             <button class="mode" data-m="4"><div class="mIco">⚔</div><div class="mNm">Squad</div>
               <div class="mDs">4 players · full fireteam</div></button>
           </div>
@@ -245,14 +330,81 @@
             <h4>👋 Invite your friends</h4>
             <p>Everyone plays on <b>one screen, one keyboard</b> — pull up extra chairs. Gold and lives are
                shared, so you win or lose together, but kills are counted per player if you want bragging rights.
-               Each player gets their own cursor and their own slice of the arsenal.</p>
+               Every player gets their own cursor and the full arsenal.</p>
             <div class="ctrls" id="ctrlList"></div>
             <p class="fine">Playing apart instead? Send them this exact file — unlocks save per computer,
                so you can each chase the four locked guns and compare runs.</p>
             <button id="bCopy">Copy invite message</button>
+            <button id="bOnline" class="primary" style="width:100%;margin-top:7px;font-size:13px">
+              🌐  Play online — different computers</button>
           </div>
         </div>
       </div>
+
+      <!-- ── online co-op ─────────────────────────────────────────────── -->
+      <div id="online" class="hide">
+        <div class="onIn">
+          <h1>PLAY ONLINE</h1>
+          <div class="tag">Same co-op game, one player per computer. Everyone gets the full
+            arsenal; gold and lives are shared. Kills are counted per player.</div>
+
+          <div class="onTabs">
+            <button data-t="host" class="on">Host a game</button>
+            <button data-t="join">Join with code</button>
+            <button data-t="browse">Public games</button>
+          </div>
+
+          <div class="onPane on" data-p="host">
+            <div class="fRow"><label>Your name</label><input id="hostName" maxlength="24" placeholder="Player"></div>
+            <div class="fRow"><label>Game name</label><input id="roomName" maxlength="40" placeholder="Iron Line"></div>
+            <div class="fRow"><label>Party</label>
+              <select id="roomSize">
+                <option value="1">Solo — 1 player</option>
+                <option value="2" selected>Duo — 2 players</option>
+                <option value="3">Trio — 3 players</option>
+                <option value="4">Squad — 4 players</option>
+              </select></div>
+            <div class="fRow"><label>Map</label><select id="roomMap"></select></div>
+            <label class="chk"><input type="checkbox" id="roomPublic"> List it publicly so anyone can join</label>
+            <label class="chk"><input type="checkbox" id="roomUnlock"> Skip the quests — give everyone every weapon</label>
+            <button id="bCreate" class="primary" style="font-size:15px;padding:10px">Create game</button>
+          </div>
+
+          <div class="onPane" data-p="join">
+            <div class="fRow"><label>Your name</label><input id="joinName" maxlength="24" placeholder="Player"></div>
+            <div class="fRow"><label>Code</label><input id="joinCode" maxlength="5" placeholder="ABCDE"></div>
+            <button id="bJoin" class="primary" style="font-size:15px;padding:10px">Join game</button>
+          </div>
+
+          <div class="onPane" data-p="browse">
+            <div id="roomList"><div class="empty">Looking for open games…</div></div>
+            <button id="bRefresh">Refresh</button>
+          </div>
+
+          <div id="roomBox" style="display:none;margin-top:11px">
+            <div class="rHead"><span class="lbl">Code</span><span class="code" id="rCode">—</span>
+              <span class="grow" style="flex:1"></span>
+              <button id="bCopyLink" style="font-size:11px;padding:4px 9px">Copy invite link</button></div>
+            <div id="seatList"></div>
+            <div id="chatLog"></div>
+            <input id="chatSay" maxlength="200" placeholder="Say something…">
+            <div class="onBtns" style="margin-top:9px">
+              <button id="bLeave">Leave</button>
+              <button id="bStart" class="primary">Start the run</button>
+            </div>
+          </div>
+
+          <div id="onErr"></div>
+          <div class="onBtns" style="margin-top:9px">
+            <button id="bOffline">← Back to local play</button>
+          </div>
+          <div id="onNet">Connecting…</div>
+        </div>
+      </div>
+
+      <div id="netPill"><span class="dot"></span><span id="netTxt">online</span></div>
+      <div id="mpBar"></div>
+      <div id="mpChat"><div id="mpLog"></div><input id="mpSay" maxlength="200" placeholder="Press T to chat…"></div>
     </div>
     <div id="hint"><kbd>1</kbd>…<kbd>0</kbd> towers (unlocked order) · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> bots · <kbd>B</kbd>/<kbd>M</kbd> bandage/medkit · <kbd>U</kbd> upgrade · <kbd>X</kbd> sell · <kbd>Esc</kbd> cancel · <kbd>Space</kbd> pause · <kbd>Enter</kbd> next wave</div>
   </div>
@@ -276,6 +428,12 @@
     <div class="grp"><h3 id="hBot">Bots — deploy anywhere</h3><div class="shop" id="shopBot"></div>
       <div style="font-size:10.5px;color:var(--dim);margin-top:6px;line-height:1.5">
         Bots stand <i>on</i> the road. Blade bots body-block ground enemies; when destroyed they respawn on their own.
+      </div>
+    </div>
+    <div class="grp"><h3>Quests — heavy weapons</h3>
+      <div id="questList"></div>
+      <div style="font-size:10.5px;color:var(--dim);margin-top:6px;line-height:1.5">
+        Progress is saved on this computer and carries between runs.
       </div>
     </div>
     <div class="grp"><h3>Medical</h3><div class="shop" id="shopHeal"></div>
@@ -401,7 +559,70 @@ let UNLOCKED=new Set();
 try{ const s=JSON.parse(localStorage.getItem(SAVEKEY)||'[]');
      if(Array.isArray(s)) s.forEach(k=>{ if(TOWERS[k]) UNLOCKED.add(k); }); }catch(_){}
 function saveUnlocks(){ try{ localStorage.setItem(SAVEKEY,JSON.stringify([...UNLOCKED])); }catch(_){} }
-const unlocked=k=>!TOWERS[k].lock||UNLOCKED.has(k);
+// ── quests ────────────────────────────────────────────────────────────────
+// The four heavy weapons are earned. Progress is measured from things the game
+// already counts, saved on this machine, and reported to the server when you
+// join so it can enforce the locks per seat.
+const QUESTS=[
+  {gun:'flak', name:'Ground the Flight', kind:'cumulative', stat:'flyerKills', target:120,
+   desc:'Shoot down 120 flyers'},
+  {gun:'laser', name:'Hold the Line', kind:'best', stat:'bestWave', target:15,
+   desc:'Reach wave 15 in a single run'},
+  {gun:'railgun', name:'Armour Piercing', kind:'cumulative', stat:'bossKills', target:10,
+   desc:'Destroy 10 bosses'},
+  {gun:'plasma', name:'Scorched Earth', kind:'best', stat:'bestWave', target:30,
+   desc:'Reach wave 30 in a single run'},
+];
+const QKEY='ironline.quests';
+let QP={flyerKills:0,bossKills:0,bestWave:0};
+try{ const s=JSON.parse(localStorage.getItem(QKEY)||'{}');
+     for(const k in QP) if(Number.isFinite(+s[k])) QP[k]=+s[k]; }catch(_){}
+function saveQuests(){ try{ localStorage.setItem(QKEY,JSON.stringify(QP)); }catch(_){} }
+const questDone=q=>QP[q.stat]>=q.target;
+function questUnlocked(){ const s=new Set(); for(const q of QUESTS) if(questDone(q)) s.add(q.gun); return s; }
+
+// Fold progress in and announce anything newly earned.
+function questBump(stat,value,cumulative){
+  const before=questUnlocked();
+  if(cumulative) QP[stat]=(QP[stat]||0)+value;
+  else QP[stat]=Math.max(QP[stat]||0,value);
+  saveQuests();
+  const after=questUnlocked();
+  for(const q of QUESTS){
+    if(after.has(q.gun)&&!before.has(q.gun)){
+      UNLOCKED.add(q.gun); saveUnlocks();
+      pop(W/2,140,'🔓 '+TOWERS[q.gun].name+' UNLOCKED','#ffe066');
+      pop(W/2,168,'quest complete — '+q.name,'#9fd8ff');
+      burst(W/2,H/2,'#ffe066',40,220);
+    }
+  }
+  if(after.size!==before.size) paintQuests();
+}
+
+function paintQuests(){
+  const box=document.getElementById('questList');
+  if(!box) return;
+  const waived=NET.active&&NET.allUnlocked;
+  box.innerHTML=QUESTS.map(q=>{
+    const T=TOWERS[q.gun];
+    const have=Math.min(QP[q.stat]||0,q.target), done=have>=q.target;
+    const f=Math.round(have/q.target*100);
+    return `<div class="qst${done?' done':''}">
+      <div class="qTop"><span class="ic" style="color:${T.color}">${T.glyph}</span>
+        <span class="nm">${T.name}</span>
+        <span class="pc">${done?'✓ unlocked':have+' / '+q.target}</span></div>
+      <div class="qDs">${q.name} — ${q.desc}</div>
+      <div class="qBar"><i style="width:${f}%"></i></div></div>`;
+  }).join('')+(waived
+    ? '<div class="qDs" style="color:#6ee7a8">Host waived the locks for this room — all weapons available.</div>'
+    : '');
+}
+
+// Online, the room decides what is available: normally your own earned set,
+// unless the host waived the locks for a casual game.
+const unlocked=k=>NET.active
+  ? (NET.allUnlocked || !TOWERS[k].lock || questUnlocked().has(k))
+  : (!TOWERS[k].lock || UNLOCKED.has(k) || questUnlocked().has(k));
 const lockedPool=()=>TKEYS.filter(k=>TOWERS[k].lock&&!UNLOCKED.has(k));
 function unlockRandom(){
   const pool=lockedPool();
@@ -445,6 +666,9 @@ const ENEMIES={
 
 // ───────────────────────────── 100-wave curve
 const MAXWAVE=50;
+// How long THIS run is. Offline it is always 50; online the server decides
+// (50 solo, 100 with a party) and tells us in the start payload.
+let WAVECAP=MAXWAVE;
 const hpScale = n => 1 + .36*(n-1) + .048*(n-1)*(n-1);
 const bossHp  = n => 800 * hpScale(n) * 1.5;
 const goldScale = n => 1 + .04*(n-1);
@@ -457,8 +681,9 @@ function waveDef(n){
   if(n>=2) w.push({t:'runner', c:cap(3+m*.7,26), g:Math.max(.18,.45-m*.004)});
   if(n>=3) w.push({t:'flyer',  c:cap(2+m*.5,22), g:Math.max(.24,.6-m*.005)});
   if(n>=4) w.push({t:'tank',   c:cap(1+m/3.2,16), g:Math.max(.38,1.05-m*.007)});
-  if(n%5===0) w.push({t:'boss', c:1+Math.floor(n/20), g:2.2});
-  if(n===MAXWAVE-1) w.push({t:'ultra', c:3, g:6});     // three Ultra Bosses
+  // a boss every wave from 5, plus one more every ten waves
+  if(n>=5) w.push({t:'boss', c:1+Math.floor((n-5)/10), g:2.2});
+  if(n===WAVECAP-1) w.push({t:'ultra', c:3, g:6});      // three Ultra Bosses
   return w;
 }
 
@@ -466,29 +691,36 @@ function waveDef(n){
 let G;
 // ── party modes: Solo / Duo / Trio / Squad, all on one screen ──
 let PLAYERS=1;
+// Which seat this browser is playing. Always 1 for local/couch play; online it
+// is whatever the server handed us, and every "is this mine?" check keys off it.
+let MYSEAT=1;
+
+// Online state. Declared up here (not down with the rest of the networking)
+// because unlocked(), drawCursors() and syncUI() all branch on NET.active and
+// they are defined long before the network code that fills this in.
+const NET={
+  active:false, ws:null, seat:0, isHost:false, token:null, name:'',
+  room:null, info:null, roster:[], chat:[], state:'idle',
+  allUnlocked:true, unlockedSet:new Set(), outcome:null,
+  // `want` is "we should be connected right now" — it is what drives retries.
+  want:false, retryAt:0,
+  ping:0, lastPongAt:0, tries:0,
+  // interpolation: render between the last two snapshots, which is what turns
+  // 15 Hz of network into 60 fps of motion
+  prevAt:0, curAt:0, dur:66,
+  ents:{ e:new Map(), t:new Map(), b:new Map(), u:new Map() },
+  purses:[0,0,0,0],
+  selId:0, lastCursor:'',
+};
+const $on=id=>document.getElementById(id);
 const MODES={1:'Solo',2:'Duo',3:'Trio',4:'Squad'};
 const PCOL={1:'#4aa8ff',2:'#ff9f5a',3:'#6ee7a8',4:'#c58bff'};
-const GUNS      =()=>TKEYS.filter(k=>TOWERS[k].cat==='gun');
-const LIGHTGUNS =['pistol','gatling','minigun','launcher'];
-const HEAVYGUNS =['sniper','flak','laser','railgun','plasma'];
-const SWORDS    =['blade','greatsword'];
-// who may build what, per party size
-function kitOf(pl){
-  const n=PLAYERS;
-  if(n===1) return [...TKEYS,...BKEYS];
-  if(n===2) return pl===1 ? GUNS() : [...SWORDS,...BKEYS];
-  if(n===3) return pl===1 ? GUNS() : pl===2 ? SWORDS : [...BKEYS];
-  return pl===1 ? LIGHTGUNS : pl===2 ? SWORDS : pl===3 ? [...BKEYS] : HEAVYGUNS;
-}
-const kitName=pl=>{
-  const n=PLAYERS;
-  if(n===1) return 'Everything';
-  if(n===2) return pl===1?'Guns':'Swords & Bots';
-  if(n===3) return pl===1?'Guns':pl===2?'Swords':'Bots';
-  return pl===1?'Light guns':pl===2?'Swords':pl===3?'Bots':'Heavy guns';
-};
-const canUse=(pl,k)=>kitOf(pl).includes(k);
-const ownerOf=k=>{ for(let pl=1;pl<=PLAYERS;pl++) if(canUse(pl,k)) return pl; return 1; };
+// Every seat gets the whole arsenal — no slicing it up by player number.
+// Gold and lives are shared, anyone can build, upgrade or sell anything, and
+// kills stay attributed per seat so the scoreboard still has teeth.
+function kitOf(pl){ return [...TKEYS,...BKEYS]; }
+const kitName=pl=>'Full arsenal';
+const canUse=(pl,k)=>!!(TOWERS[k]||BOTS[k]);
 // keyboard players are 2..PLAYERS (player 1 is on the mouse)
 const KEYMAP={
   2:{up:'w',left:'a',down:'s',right:'d',build:'f',cycle:'r',up2:'g',sell:'v',go:'c'},
@@ -548,6 +780,7 @@ function burst(x,y,col,n,sp){
 // ───────────────────────────── waves
 function startWave(early){
   if(G.waveActive||G.over) return;
+  if(!NET.active) questBump('bestWave',G.wave+1,false);   // reaching a wave counts
   if(early&&G.prep>0){ const b=Math.round(G.prep*3); G.gold+=b; pop(W/2,60,'+'+b+' early bonus','#f2c14e'); }
   G.wave++; G.waveActive=true; G.spawning=true; G.prep=0;
   const q=[];
@@ -591,6 +824,11 @@ function kill(e,src){
   if(jack) burst(e.x,e.y,'#ffe066',18,150);
   burst(e.x,e.y,ENEMIES[e.type].color,e.type==='boss'?46:14,e.type==='boss'?220:120);
   if(src){ src.kills++; if(src.owner) G.score[src.owner]++; }
+  // offline quest progress (online it arrives from the server in the snapshot)
+  if(!NET.active){
+    if(e.fly) questBump('flyerKills',1,true);
+    if(e.type==='boss'||e.type==='ultra') questBump('bossKills',1,true);
+  }
   if(e.type==='boss') G.shake=14;
   if(e.type==='ultra'){ G.shake=30; burst(e.x,e.y,'#ff2d6f',90,340);
     pop(W/2,120,'ULTRA BOSS DOWN','#ff2d6f'); }
@@ -604,7 +842,7 @@ function leak(e){
   G.shake=Math.max(G.shake,8); G.keep.hit=.7;
   pop(W-48,e.y,'-'+d+' ♥','#e5534b');
   if(G.lives<=0){ G.lives=0; G.over=true;
-    showMsg(true,'Overrun','The line broke on wave '+G.wave+' of '+MAXWAVE+'.  '+G.killed+' kills · '
+    showMsg(true,'Overrun','The line broke on wave '+G.wave+' of '+WAVECAP+'.  '+G.killed+' kills · '
       +G.towers.length+' emplacements · '+G.bots.length+' bots.'); }
   syncUI();
 }
@@ -615,7 +853,7 @@ function update(dt){
   if(G.over) return;
   if(G.shake>0) G.shake=Math.max(0,G.shake-dt*30);
 
-  if(!G.waveActive&&G.wave<MAXWAVE){
+  if(!G.waveActive&&G.wave<WAVECAP){
     // auto-skip: don't sit through the countdown, just roll straight into the next wave
     if(AUTOSKIP && G.prep>0 && G.prep<14.2){ startWave(true); }
     else { G.prep-=dt; if(G.prep<=0){ G.prep=0; startWave(false); } }
@@ -700,12 +938,7 @@ function update(dt){
     b.life-=dt; if(b.life<=0){ impact(b,b.x,b.y); G.bullets.splice(i,1); }
   }
 
-  // fx
-  for(let i=G.parts.length-1;i>=0;i--){ const p=G.parts[i];
-    p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=.93; p.vy*=.93; p.life-=dt; if(p.life<=0) G.parts.splice(i,1); }
-  for(let i=G.texts.length-1;i>=0;i--){ const t=G.texts[i]; t.y-=26*dt; t.life-=dt; if(t.life<=0) G.texts.splice(i,1); }
-  for(let i=G.zaps.length-1;i>=0;i--){ G.zaps[i].life-=dt; if(G.zaps[i].life<=0) G.zaps.splice(i,1); }
-  for(let i=G.swings.length-1;i>=0;i--){ G.swings[i].life-=dt; if(G.swings[i].life<=0) G.swings.splice(i,1); }
+  updateFx(dt);
 
   if(G.waveActive&&!G.spawning&&!G.enemies.length){
     G.waveActive=false;
@@ -714,18 +947,45 @@ function update(dt){
     const bonus=Math.round((25+20*G.wave)*(.8+Math.random()*.4));
     G.gold+=bonus;
     pop(W/2,92,'Wave '+G.wave+' cleared  +'+bonus,'#6ee7a8');
-    if(G.wave>=MAXWAVE){
+    if(G.wave>=WAVECAP){
       G.over=true; G.won=true;
       const got=unlockRandom();
       const left=lockedPool().length;
       showMsg(true,'Line Held',
-        'All '+MAXWAVE+' waves repelled with '+G.lives+' lives left — '+G.killed+' total kills.'
+        'All '+WAVECAP+' waves repelled with '+G.lives+' lives left — '+G.killed+' total kills.'
         + (got ? '\n\n🔓 NEW WEAPON UNLOCKED: '+TOWERS[got].name+' — '+TOWERS[got].desc
                  + (left? '  ('+left+' still locked)' : '  (you have them all)')
                : '\n\nEvery weapon is already unlocked.'));
       syncUI();
     } else G.prep=15;
     syncUI();
+  }
+}
+
+// Cosmetics only — particles, floating text, beams, sword arcs. Split out of
+// update() because online play needs these to breathe while the authoritative
+// simulation runs on the server.
+function updateFx(dt){
+  for(let i=G.parts.length-1;i>=0;i--){ const p=G.parts[i];
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=.93; p.vy*=.93; p.life-=dt; if(p.life<=0) G.parts.splice(i,1); }
+  for(let i=G.texts.length-1;i>=0;i--){ const t=G.texts[i]; t.y-=26*dt; t.life-=dt; if(t.life<=0) G.texts.splice(i,1); }
+  for(let i=G.zaps.length-1;i>=0;i--){ G.zaps[i].life-=dt; if(G.zaps[i].life<=0) G.zaps.splice(i,1); }
+  for(let i=G.swings.length-1;i>=0;i--){ G.swings[i].life-=dt; if(G.swings[i].life<=0) G.swings.splice(i,1); }
+  capFx();
+}
+
+// Hard ceilings on the cosmetic arrays.
+//
+// These decay in updateFx, which only runs inside requestAnimationFrame — and
+// a backgrounded tab stops getting frames while the WebSocket keeps delivering
+// events at 15 Hz. Without a cap, leaving an online game in a background tab
+// grows these arrays without limit until the tab is killed. Dropping the oldest
+// costs nothing: they are particles nobody is looking at.
+const FXCAP={parts:900,texts:120,zaps:160,swings:120};
+function capFx(){
+  for(const k in FXCAP){
+    const a=G[k];
+    if(a&&a.length>FXCAP[k]) a.splice(0,a.length-FXCAP[k]);
   }
 }
 
@@ -1535,7 +1795,7 @@ const FP={on:false,x:440,y:470,yaw:-Math.PI/2,pitch:-46,eh:27,bob:0,step:0,keys:
   fly:false, alt:27, vy:0, jet:0, jumps:0, spacePrev:false, jumpFx:0, jumpQueued:false, advance:false, holdT:0, avatar:true,
   slot:0, slots:[{kind:'gun'},{kind:'build',key:'pistol'},{kind:'build',key:'gatling'},
                  {kind:'build',key:'rifleBot'},{kind:'hand'}]};
-const buildable=()=>[...TKEYS.filter(k=>unlocked(k)&&canUse(1,k)),...BKEYS];
+const buildable=()=>[...TKEYS.filter(k=>unlocked(k)&&canUse(MYSEAT,k)),...BKEYS];
 function selectSlot(i){
   if(i<0||i>=FP.slots.length) return;
   FP.slot=i;
@@ -1652,6 +1912,9 @@ addEventListener('mousemove',ev=>{
 function fpOwns(k){
   if(!FP.on&&!FP.avatar) return false;
   const n=G.players;
+  // Online there is no soldier to move — the game is pure tower defence, and
+  // the movement keys stay free for the shop hotkeys.
+  if(NET.active) return false;
   if(!FP.on){                                   // top-down: arrows only, WASD stays a build hotkey
     if(k===' '||k==='spacebar') return true;
     return k.startsWith('arrow')&&n<4;
@@ -1663,6 +1926,10 @@ function fpOwns(k){
 }
 addEventListener('keydown',ev=>{
   if(!FP.on&&!FP.avatar) return;
+  // Never steal keys from a text field — arrows have to move the caret in the
+  // room-code and name inputs, not strafe your soldier.
+  const tag=(ev.target&&ev.target.tagName)||'';
+  if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA') return;
   const k=ev.key.toLowerCase();
   if(ev.code==='ControlRight'){ FP.keys['control']=true; ev.preventDefault(); return; }
   if(!fpOwns(k)) return;
@@ -2609,7 +2876,7 @@ function draw(){
 
   drawKeep();
   drawCursors();
-  if(FP.avatar&&!FP.on) drawAvatar();
+  if(!NET.active&&FP.avatar&&!FP.on) drawAvatar();
   for(const t of G.towers) drawTower(t);
   for(const b of G.bots) drawBot(b);
 
@@ -2675,11 +2942,14 @@ function draw(){
       }
       ctx.textAlign='center'; ctx.font='bold '+(ultra?13:11)+'px Segoe UI,sans-serif';
       ctx.fillStyle=ultra?'#ff8ab0':'#ffb3ae';
+      // Online, enemy hp is a 0-255 byte, so print a percentage rather than a
+      // raw number that would read "173" for a 4,000 hp boss.
+      const hpLabel = NET.active ? Math.round(fr*100)+'%' : Math.round(hpNow).toLocaleString();
       ctx.fillText(ENEMIES[big.type].name+(group.length>1?'  ×'+group.length:'')
-        +'   '+Math.round(hpNow).toLocaleString(),W/2,by-5);
+        +'   '+hpLabel,W/2,by-5);
     }
   }
-  if(FP.avatar&&!FP.on){        // your soldier's status, top-down
+  if(!NET.active&&FP.avatar&&!FP.on){   // your soldier's status, top-down (offline only)
     const g2=CARRY[FP.gun], inf=G.admin.god||G.admin.infAmmo;
     ctx.textAlign='left'; ctx.font='bold 11px Segoe UI,sans-serif';
     ctx.fillStyle='rgba(8,12,16,.66)'; ctx.fillRect(8,H-58,206,50);
@@ -2692,12 +2962,13 @@ function draw(){
     ctx.fillText('arrows move · click to shoot · SPACE fly · R reload · P pause',14,H-15);
     ctx.textAlign='center';
   }
-  if(!G.waveActive&&!G.over&&G.wave<MAXWAVE){
+  if(!G.waveActive&&!G.over&&G.wave<WAVECAP){
     ctx.font='600 13px Segoe UI,sans-serif'; ctx.fillStyle='rgba(230,237,243,.55)';
     ctx.fillText('Wave '+(G.wave+1)+' in '+G.prep.toFixed(1)+'s  —  build now, or call it early for bonus gold',W/2,H-16);
   }
   ctx.restore();
 }
+
 function marker(x,y,d){ ctx.beginPath(); ctx.moveTo(x,y-13); ctx.lineTo(x+13*d,y); ctx.lineTo(x,y+13); ctx.closePath(); ctx.fill(); }
 
 // you, on the top-down map
@@ -2731,7 +3002,11 @@ function drawAvatar(){
 }
 
 function drawCursors(){
-  for(let pl=2;pl<=G.players;pl++){
+  // Locally, seat 1 is the mouse and has no tile reticle. Online, every seat
+  // but your own gets one — that is the whole point of seeing your teammates.
+  const skip = NET.active ? MYSEAT : 1;
+  for(let pl=1;pl<=G.players;pl++){
+    if(pl===skip) continue;
     const cur=G.cur[pl]; if(!cur) continue;
     const k=curKey(pl); if(!k) continue;
     const col=PCOL[pl], x=cur.c*TS, y=cur.r*TS, cx=x+TS/2, cy=y+TS/2;
@@ -2971,7 +3246,6 @@ $('maxL').textContent=MAXLIVES;
 function pick(k){
   if(G.over) return;
   if(TOWERS[k]&&!unlocked(k)){ pop(W/2,150,'🔒 win a run to unlock '+TOWERS[k].name,'#8b98a5'); return; }
-  if(!canUse(1,k)){ const o=ownerOf(k); pop(W/2,150,'that\'s Player '+o+'\'s kit',PCOL[o]); return; }
   if(FP.on){                       // in first person, load it into a build slot
     let i=FP.slots.findIndex((sl,n)=>sl.kind==='build'&&n===FP.slot);
     if(i<0) i=FP.slots.findIndex(sl=>sl.kind==='build');
@@ -3005,6 +3279,7 @@ function deployBot(k,x,y,owner){
 }
 function buyHeal(k){
   if(G.over) return;
+  if(NET.active){ intent({a:'heal',k}); return; }
   const Hh=HEALS[k], c=healCost(k);
   if(G.lives>=MAXLIVES){ pop(W/2,120,'already at full strength','#8b98a5'); return; }
   if(!spend(c)){ pop(W/2,120,'need '+c+'g','#e5534b'); return; }
@@ -3020,7 +3295,7 @@ function syncUI(){
   if(!G) return;
   $('sLives').textContent=G.lives;
   $('sGold').textContent=Math.floor(G.gold);
-  $('sWave').textContent=G.wave+' / '+MAXWAVE;
+  $('sWave').textContent=G.wave+' / '+WAVECAP;
   $('sMap').textContent=MAPNAME;
   const cap=maxSquads();
   $('sSquad').textContent=G.bots.length+' / '+(cap===Infinity?'∞':cap);
@@ -3033,7 +3308,13 @@ function syncUI(){
       Array.from({length:G.players},(_,i)=>i+1)
         .map(pl=>`<span style="color:${PCOL[pl]}">P${pl} <b>${G.score[pl]}</b></span>`).join('');
   }
-  $('bMode').textContent=MODES[G.players];
+  // Online, time is the server's to control and the cheat panel is nobody's.
+  // Auto stays live though — it is a legitimate shared setting, not a cheat.
+  for(const b of ['bPause','bSpeed','bFP','bAdmin','bMode','bNet'])
+    $(b).disabled=NET.active;
+  $('bAuto').disabled=NET.active&&G.over;
+  $('bMode').textContent=NET.active?(MODES[G.players]+' · P'+MYSEAT):MODES[G.players];
+  $('bMode').style.color=NET.active?PCOL[MYSEAT]:'';
   $('bFP').title=G.players>1
     ? 'First person — you keep the mouse, teammates keep their keys'
     : 'First-person view (V)';
@@ -3044,9 +3325,9 @@ function syncUI(){
       +' · <kbd>B</kbd>/<kbd>M</kbd> bandage/medkit · <kbd>U</kbd> upgrade · <kbd>X</kbd> sell'
       +' · click a unit then click the ground to <b>send them walking</b>'
       +' · <kbd>Esc</kbd> deselect · <kbd>Space</kbd> pause · <kbd>Enter</kbd> next wave';
-  $('hGun').textContent   = multi?'Guns — P'+(G.players===4?'1 / P4':'1'):'Guns';
-  $('hSword').textContent = multi?'Swords — P'+(G.players===2?'2':'2'):'Swords';
-  $('hBot').textContent   = multi?'Bots & Crew — P'+(G.players>=3?'3':'2'):'Bots & Crew — deploy anywhere';
+  $('hGun').textContent   = 'Guns';
+  $('hSword').textContent = 'Swords';
+  $('hBot').textContent   = 'Bots & Crew — deploy anywhere';
   $('bWave').disabled=G.waveActive||G.over;
   $('bWave').textContent=G.waveActive?'In progress':'Start Wave '+(G.wave+1);
   $('bPause').textContent=G.paused?'Resume':'Pause';
@@ -3054,12 +3335,10 @@ function syncUI(){
   for(const el of [...$('shopGun').children,...$('shopSword').children,...$('shopBot').children]){
     const k=el.dataset.k, d=TOWERS[k]||BOTS[k];
     const lock=TOWERS[k]&&!unlocked(k);
-    const mine=canUse(1,k);
     el.classList.toggle('sel',G.place===k);
-    el.classList.toggle('locked',!!lock||!mine);
-    el.classList.toggle('poor',!lock&&mine&&G.gold<d.cost);
-    el.querySelector('.pr').textContent = lock ? '🔒 locked'
-      : !mine ? 'P'+ownerOf(k) : d.cost+'g';
+    el.classList.toggle('locked',!!lock);
+    el.classList.toggle('poor',!lock&&G.gold<d.cost);
+    el.querySelector('.pr').textContent = lock ? '🔒 locked' : d.cost+'g';
   }
   for(const el of $('shopHeal').children){
     const c=healCost(el.dataset.k);
@@ -3090,26 +3369,38 @@ function syncUI(){
       $('iRate').textContent=s.rate.toFixed(2)+'/s'+(D.spinup?' (spins up)':'');
     }
     $('iKills').textContent=u.kills;
-    if(u.lvl>=MAXLVL){ $('bUp').disabled=true; $('bUp').textContent='Max level'; $('iUp').textContent=''; }
-    else{
-      const c=upCost(u);
-      $('bUp').disabled=G.gold<c;
-      $('bUp').textContent='Upgrade — '+c+'g';
-      if(isBot(u)){
-        const n=botStats(u.kind,u.lvl+1);
-        $('iUp').textContent='→ '+Math.round(D.heal>0?n.heal:n.dmg)+(D.heal>0?' repair':' dmg')+' · '+Math.round(n.hp)+' hp';
-      } else {
-        const n=statsOf(u.type,u.lvl+1);
-        $('iUp').textContent='→ '+Math.round(n.dmg)+' dmg · '+Math.round(n.range)+' rng · '+n.rate.toFixed(2)+'/s';
+    // Online, only the owner may upgrade or sell — say so on the buttons rather
+    // than letting the click travel and come back refused.
+    const mineU = !NET.active || u.owner===MYSEAT;
+    $('iName').textContent = mineU ? D.name : D.name+'  ·  P'+u.owner;
+    $('iName').style.color = mineU ? '' : (PCOL[u.owner]||'');
+    if(!mineU){
+      $('bUp').disabled=true;   $('bUp').textContent="Player "+u.owner+"'s unit";
+      $('bSell').disabled=true; $('bSell').textContent="Player "+u.owner+"'s unit";
+      $('iUp').textContent='';
+    } else {
+      $('bSell').disabled=false;
+      $('bSell').textContent=(isBot(u)?'Recall — ':'Sell — ')+Math.floor(u.spent*.6)+'g';
+      if(u.lvl>=MAXLVL){ $('bUp').disabled=true; $('bUp').textContent='Max level'; $('iUp').textContent=''; }
+      else{
+        const c=upCost(u);
+        $('bUp').disabled=G.gold<c;
+        $('bUp').textContent='Upgrade — '+c+'g';
+        if(isBot(u)){
+          const n=botStats(u.kind,u.lvl+1);
+          $('iUp').textContent='→ '+Math.round(D.heal>0?n.heal:n.dmg)+(D.heal>0?' repair':' dmg')+' · '+Math.round(n.hp)+' hp';
+        } else {
+          const n=statsOf(u.type,u.lvl+1);
+          $('iUp').textContent='→ '+Math.round(n.dmg)+' dmg · '+Math.round(n.range)+' rng · '+n.rate.toFixed(2)+'/s';
+        }
       }
     }
-    $('bSell').textContent=(isBot(u)?'Recall — ':'Sell — ')+Math.floor(u.spent*.6)+'g';
   } else ins.style.display='none';
 
   const nx=G.wave+1;
-  $('nextInfo').innerHTML = nx>MAXWAVE ? 'All waves cleared.' :
+  $('nextInfo').innerHTML = nx>WAVECAP ? 'All waves cleared.' :
     waveDef(nx).map(g=>`<div>${g.c}× ${ENEMIES[g.t].name}${ENEMIES[g.t].fly?' <span style="color:#d18bff">(air)</span>':''}</div>`).join('')
-    +`<div style="margin-top:4px;color:#5f6b77">hp ×${hpScale(nx).toFixed(1)} · armour +${Math.floor(nx/12)}</div>`;
+    +`<div style="margin-top:4px;color:#5f6b77">hp ×${hpScale(nx).toFixed(1)} · armour +${Math.floor(nx/6)}</div>`;
 }
 function showMsg(on,t,p){
   const m=$('msg'); m.style.display=on?'grid':'none';
@@ -3155,6 +3446,22 @@ cv.addEventListener('click',ev=>{
     syncUI(); return;
   }
   const p=toCanvas(ev), {c,r}=tileAt(p.x,p.y);
+  if(NET.active){
+    // Online: ask, never mutate. The next snapshot is what makes it real.
+    if(G.place&&BOTS[G.place]){ intent({a:'deploy',k:G.place,x:p.x,y:p.y}); G.place=null; syncUI(); return; }
+    if(G.place){ intent({a:'build',k:G.place,c,r}); G.place=null; syncUI(); return; }
+    let hit=null,hd=18;
+    for(const b of G.bots){ const d=dist(p.x,p.y,b.dead?b.rx:b.x,b.dead?b.ry:b.y); if(d<hd){ hd=d; hit=b; } }
+    if(!hit) hit=towerAt(c,r)||null;
+    // a selected walker + a click on open ground = a move order. Any seat may
+    // move any bot; control is shared, so the client must not second-guess it.
+    if(!hit&&isBot(G.sel)&&!G.sel.dead){
+      intent({a:'order',id:G.sel.id,x:p.x,y:p.y}); return;
+    }
+    NET.selId=(hit&&hit.id!==NET.selId)?hit.id:0;
+    G.sel=NET.selId?hit:null;
+    syncUI(); return;
+  }
   if(G.place&&BOTS[G.place]){
     const b=deployBot(G.place,p.x,p.y,1);
     if(b){ G.sel=b; G.place=null; }
@@ -3181,13 +3488,14 @@ cv.addEventListener('click',ev=>{
 });
 cv.addEventListener('contextmenu',ev=>{ ev.preventDefault();
   if(FP.on) return;                                   // right button is 'walk' in first person
-  G.place=null; G.sel=null; syncUI(); });
+  G.place=null; G.sel=null; NET.selId=0; syncUI(); });
 
-$('bWave').onclick=()=>startWave(true);
-$('bPause').onclick=()=>{ G.paused=!G.paused; syncUI(); };
-$('bSpeed').onclick=()=>{ G.speed=G.speed>=4?1:G.speed+1; syncUI(); };
+$('bWave').onclick=()=>{ if(NET.active) intent({a:'wave'}); else startWave(true); };
+$('bPause').onclick=()=>{ if(NET.active) return; G.paused=!G.paused; syncUI(); };
+$('bSpeed').onclick=()=>{ if(NET.active) return; G.speed=G.speed>=4?1:G.speed+1; syncUI(); };
 $('bUp').onclick=()=>{
   const u=G.sel; if(!u||u.lvl>=MAXLVL) return;
+  if(NET.active){ intent({a:'upgrade',id:u.id}); return; }
   const c=upCost(u); if(!spend(c)) return;
   u.lvl++; u.spent+=c;
   if(isBot(u)&&!u.dead) u.hp=botStats(u.kind,u.lvl).hp;
@@ -3195,6 +3503,7 @@ $('bUp').onclick=()=>{
 };
 $('bSell').onclick=()=>{
   const u=G.sel; if(!u) return;
+  if(NET.active){ intent({a:'sell',id:u.id}); NET.selId=0; return; }
   const back=Math.floor(u.spent*.6); G.gold+=back;
   pop(u.x,u.y,'+'+back,'#f2c14e'); burst(u.x,u.y,'#8b98a5',10,90);
   if(isBot(u)){ for(const e of G.enemies) if(e.block===u) e.block=null;
@@ -3202,7 +3511,10 @@ $('bSell').onclick=()=>{
   else G.towers.splice(G.towers.indexOf(u),1);
   G.sel=null; syncUI();
 };
-$('msgB').onclick=()=>{ newGame(); };
+$('msgB').onclick=()=>{
+  if(NET.active){ if(NET.isHost) netSend({type:'restart'}); return; }
+  newGame();
+};
 
 // ───────────────────────────── admin panel (it's your game — cheat freely)
 let adminOpen=false;
@@ -3281,9 +3593,9 @@ const ADMIN={
   gundmg:()=>{ const n=ask('Multiply your carried-gun damage by:',String(G.admin.gunMul));
     if(n!==null&&n>0) G.admin.gunMul=n; },
   wprev:()=>{ G.wave=Math.max(0,G.wave-1); },
-  wnext:()=>{ G.wave=Math.min(MAXWAVE,G.wave+1); },
-  wjump:()=>{ const n=ask('Jump to wave (1-'+MAXWAVE+'):',String(G.wave));
-    if(n!==null) G.wave=clamp(Math.round(n),0,MAXWAVE); },
+  wnext:()=>{ G.wave=Math.min(WAVECAP,G.wave+1); },
+  wjump:()=>{ const n=ask('Jump to wave (1-'+WAVECAP+'):',String(G.wave));
+    if(n!==null) G.wave=clamp(Math.round(n),0,WAVECAP); },
   clear:()=>{ for(const e of G.enemies.slice()) kill(e,null); },
   skip:()=>{ G.spawnQ=[]; G.spawning=false; for(const e of G.enemies.slice()) kill(e,null); },
   hpx:()=>{ const n=ask('Multiply spawned enemy HP by:',String(G.admin.hpMul));
@@ -3329,8 +3641,16 @@ let AUTOSKIP=false;
 function paintAuto(){
   $('bAuto').classList.toggle('on',AUTOSKIP);
   $('bAuto').textContent=AUTOSKIP?'⏭ Auto ON':'⏭ Auto';
+  $('bAuto').title=NET.active
+    ? 'Auto-start each wave — shared with the whole room'
+    : 'Auto-skip the countdown between waves';
 }
-$('bAuto').onclick=()=>{ AUTOSKIP=!AUTOSKIP; paintAuto(); syncUI(); };
+// Online this is a room setting, so we ask rather than flip it locally; the
+// next snapshot is what actually turns it on, for everyone at once.
+$('bAuto').onclick=()=>{
+  if(NET.active){ intent({a:'auto',on:!AUTOSKIP}); return; }
+  AUTOSKIP=!AUTOSKIP; paintAuto(); syncUI();
+};
 
 let lobbyMode=1, lobbyOpen=false, lobbyMap=-1;   // random by default   // boot straight into the game; the party picker is a click away
 const KEYLABEL={2:['W A S D','F','R','G','V','C'],3:['I J K L','H','Y','N','O','P'],
@@ -3399,7 +3719,11 @@ $('bCopy').onclick=async()=>{
 
 // ───────────────────────────── keyboard players (2 … 4)
 const kitFor=pl=>kitOf(pl).filter(k=>BOTS[k]||unlocked(k));
-const curKey=pl=>{ const list=kitFor(pl); return list[G.cur[pl].idx%list.length]; };
+const curKey=pl=>{
+  const cur=G.cur[pl]; if(!cur) return null;
+  if(cur.key!==undefined) return cur.key;          // online: the server tells us
+  const list=kitFor(pl); return list[cur.idx%list.length];
+};
 function pMove(pl,dc,dr){
   const c=G.cur[pl];
   c.c=clamp(c.c+dc,0,COLS-1); c.r=clamp(c.r+dr,0,ROWS-1);
@@ -3434,14 +3758,22 @@ addEventListener('keydown',ev=>{
   const tag=(ev.target&&ev.target.tagName)||'';
   if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA') return;   // don't fight the admin inputs
   const k=ev.key.toLowerCase();
-  if(k==='`'||k==='~'||ev.key==='F2'){ ev.preventDefault(); toggleAdmin(); return; }
-  if(k==='v'&&G.players===1){ ev.preventDefault(); FP.on?exitFP():enterFP(); return; }
+  if(NET.active){
+    // Online, three things are off the table: the cheat panel (it would let one
+    // player rewrite a shared game), first person (this is the top-down co-op),
+    // and seats 2-4's keyboard controls (everyone is on their own machine).
+    if(k==='t'){ ev.preventDefault(); $on('mpChat').classList.add('on'); $on('mpSay').focus(); return; }
+    if(k==='`'||k==='~'||ev.key==='F2'||k==='v') { ev.preventDefault(); return; }
+  } else {
+    if(k==='`'||k==='~'||ev.key==='F2'){ ev.preventDefault(); toggleAdmin(); return; }
+    if(k==='v'&&G.players===1){ ev.preventDefault(); FP.on?exitFP():enterFP(); return; }
+  }
   if(lobbyOpen){
     if(k==='enter'||k===' '){ ev.preventDefault(); $('bPlay').click(); }
     else if(k==='arrowleft'||k==='arrowright'){ lobbyMode=lobbyMode===1?2:1; paintModes(); }
     return;
   }
-  for(let pl=2;pl<=G.players;pl++){              // ── keyboard players
+  for(let pl=2;pl<=G.players&&!NET.active;pl++){ // ── keyboard players (couch only)
     const M=KEYMAP[pl]; if(!M) continue;
     if(k===M.up)   { ev.preventDefault(); pMove(pl,0,-1); return; }
     if(k===M.down) { ev.preventDefault(); pMove(pl,0,1);  return; }
@@ -3477,18 +3809,21 @@ addEventListener('keydown',ev=>{
     if(/^[1-5]$/.test(k)){ selectSlot(+k-1); return; }
     if(/^[0-9]$/.test(k)) return;
     if(k===' '){ ev.preventDefault(); return; }   // space is thrust in first person
-    if(k==='enter'){ startWave(true); return; }
+    if(k==='enter'){ $('bWave').click(); return; }
     if(k==='b'){ buyHeal('bandage'); return; }
     if(k==='m'){ buyHeal('medkit');  return; }
     return;                                   // WASD etc. belong to the walker
   }
 
-  if(k==='escape'){ G.place=null; G.sel=null; syncUI(); }
+  // NET.selId has to be cleared too, or the next snapshot re-selects the unit.
+  if(k==='escape'){ G.place=null; G.sel=null; NET.selId=0; syncUI(); }
   else if(k===' '){ ev.preventDefault();
     if(!FP.avatar){ G.paused=!G.paused; syncUI(); }   // space flies when your soldier is on the map
   }
-  else if(k==='p'){ G.paused=!G.paused; syncUI(); }
-  else if(k==='enter'){ startWave(true); }
+  else if(k==='p'){ if(!NET.active){ G.paused=!G.paused; syncUI(); } }
+  // Online, Enter must ASK for the wave. Calling startWave() locally mutated
+  // our mirror of G and flickered until the next snapshot overwrote it.
+  else if(k==='enter'){ $('bWave').click(); }
   else if(k==='u'){ $('bUp').click(); }
   else if(k==='x'){ $('bSell').click(); }
   else if(k==='b'){ buyHeal('bandage'); }
@@ -3498,32 +3833,601 @@ addEventListener('keydown',ev=>{
   else if(k==='['&&FP.avatar){ cycleSlot(-1); }
   else if(G.players===1&&'qwet'.includes(k)&&k){ const i='qwet'.indexOf(k); if(BKEYS[i]) pick(BKEYS[i]); }
   else if(/^[0-9]$/.test(k)){
-    const list=TKEYS.filter(t=>unlocked(t)&&canUse(1,t));   // digits index P1's own kit
+    const list=TKEYS.filter(t=>unlocked(t)&&canUse(MYSEAT,t));  // digits index your own kit
     const i=(k==='0')?9:(+k-1);
     if(list[i]) pick(list[i]);
   }
 });
+
+// ═══════════════════════════ ONLINE CO-OP ═══════════════════════════
+function wsUrl(){
+  const q=new URLSearchParams(location.search).get('server');
+  if(q) return q;
+  const proto=location.protocol==='https:'?'wss:':'ws:';
+  return proto+'//'+location.host+'/ivaangames/ws';
+}
+function netTokenGet(){
+  try{
+    let t=localStorage.getItem('ironline.token');
+    if(!t||!/^[a-zA-Z0-9_-]{8,64}$/.test(t)){
+      t='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
+      localStorage.setItem('ironline.token',t);
+    }
+    return t;
+  }catch(_){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,10); }
+}
+function netNameGet(){
+  try{ return localStorage.getItem('ironline.name')||''; }catch(_){ return ''; }
+}
+function netNameSet(n){ NET.name=n; try{ localStorage.setItem('ironline.name',n); }catch(_){} }
+
+function netConnect(){
+  if(NET.ws&&(NET.ws.readyState===0||NET.ws.readyState===1)) return;
+  NET.state='connecting'; paintNetStatus();
+  let ws;
+  try{ ws=new WebSocket(wsUrl()); }
+  catch(err){ netFail('cannot reach the game server'); return; }
+  NET.ws=ws;
+  ws.onopen=()=>{
+    NET.tries=0; NET.state='connected';
+    netSend({type:'hello',token:NET.token,name:NET.name||'Player',unlocked:[...questUnlocked()]});
+    paintNetStatus();
+  };
+  ws.onmessage=ev=>{
+    let m; try{ m=JSON.parse(ev.data); }catch(_){ return; }
+    netHandle(m);
+  };
+  ws.onclose=()=>{
+    NET.state='offline'; paintNetStatus();
+    // Retry whenever we still want a connection — that includes just sitting in
+    // the online lobby. (Earlier this only retried while in a room, so a socket
+    // that dropped before you joined anything left you stuck on "offline"
+    // forever with an empty map list.)
+    if(NET.want){
+      NET.tries++;
+      const wait=Math.min(8000,600*Math.pow(1.7,Math.min(NET.tries,6)));
+      NET.retryAt=performance.now()+wait;
+      setTimeout(()=>{ if(NET.want) netConnect(); },wait);
+    }
+  };
+  ws.onerror=()=>{};
+}
+function netSend(o){
+  if(NET.ws&&NET.ws.readyState===1){ try{ NET.ws.send(JSON.stringify(o)); }catch(_){} }
+}
+// Every gameplay action funnels through here. Nothing mutates G locally.
+function intent(o){ if(NET.active) netSend(Object.assign({type:'i'},o)); }
+function netFail(why){ NET.state='offline'; $on('onErr').textContent=why||''; paintNetStatus(); }
+
+function netHandle(m){
+  switch(m.type){
+    case 'welcome':
+      NET.token=m.token;
+      try{ localStorage.setItem('ironline.token',m.token); }catch(_){}
+      netFillMaps(m.maps||[]);
+      // Deep link: /ivaangames/?room=ABCDE drops you straight into a friend's game.
+      const want=new URLSearchParams(location.search).get('room');
+      if(want&&!NET.room){ $on('joinCode').value=want.toUpperCase(); netSend({type:'join',code:want}); }
+      else if(NET.room) netSend({type:'join',code:NET.room.code});   // resume after a drop
+      else netSend({type:'list'});
+      break;
+    case 'rooms': paintRoomList(m.rooms||[]); break;
+    case 'joined':
+      NET.seat=m.seat; NET.isHost=!!m.isHost;
+      NET.room=m.room; NET.roster=m.roster||[];
+      $on('onErr').textContent='';
+      paintRoom(m);
+      break;
+    case 'lobby':
+      NET.room=m.room; NET.roster=m.roster||[];
+      // Host can change under us (migration when the old host leaves).
+      if(m.isHost!==undefined) NET.isHost=!!m.isHost;
+      paintRoom(m);
+      break;
+    case 'start': if(m.info) netStart(m.info); break;
+    // Events FIRST: the 'over' event carries the result text, and applying the
+    // snapshot is what decides whether to show the results screen. The other
+    // way round always renders the *previous* run's summary.
+    case 's': if(m.e) netEvents(m.e); netSnapshot(m.s); break;
+    case 'chat': netChat(m.line); break;
+    case 'deny':
+      // The server refused an action — surface it exactly like the local game does
+      if(m.why) pop(W/2,150,m.why,'#e5534b');
+      break;
+    case 'error': {
+      $on('onErr').textContent=m.why||'something went wrong';
+      // Only tear down when the room we are IN has actually gone. A failed
+      // attempt to join some other room ("that game is full") must not evict us
+      // from the run we are happily playing — the server still has us seated.
+      const roomGone=/no room with that code|server restarting/i.test(m.why||'');
+      if(roomGone){
+        NET.active=false; NET.room=null; NET.seat=0; NET.info=null;
+        MYSEAT=1; PLAYERS=1; WAVECAP=MAXWAVE; AUTOSKIP=false; paintAuto();
+        paintMpBar(); paintRoom(null); paintNetStatus();
+        $on('online').classList.remove('hide');
+        showMsg(false);
+      }
+      break;
+    }
+    case 'left': NET.room=null; NET.active=false; paintRoom(null); break;
+    case 'pong': NET.ping=Math.round(performance.now()-m.t); NET.lastPongAt=performance.now(); break;
+  }
+}
+
+// ── starting a networked run ────────────────────────────────────────────────
+function netStart(info){
+  NET.info=info;
+  NET.ents.e.clear(); NET.ents.t.clear(); NET.ents.b.clear(); NET.ents.u.clear();
+  NET.selId=0; NET.prevAt=0; NET.curAt=0; NET.outcome=null; NET.qpSeen=null;
+  AUTOMAP=false;                                   // the server picked the map
+  AUTOSKIP=false; paintAuto();                     // the room starts with auto off
+  PLAYERS=info.players; MYSEAT=NET.seat||1;
+  if(info.unlocked===null) NET.allUnlocked=true;
+  else { NET.allUnlocked=false; NET.unlockedSet=new Set(info.unlocked); }
+  loadMap({name:info.map.name,way:info.map.way});
+  if(FP.on) exitFP();
+  toggleAdmin(false);                              // no cheat panel in a shared game
+  FP.advance=false; FP.keys={};                    // online is pure tower defence
+  WAVECAP=(info.consts&&info.consts.MAXWAVE)||MAXWAVE;
+  newGame();
+  G.players=PLAYERS; G.chests=[];                  // chests are a first-person thing
+  G.cur={1:{c:5,r:8,key:null},2:{c:8,r:8,key:null},3:{c:11,r:8,key:null},4:{c:16,r:8,key:null}};
+  NET.active=true;
+  closeLobby(); $on('online').classList.add('hide');
+  showMsg(false);
+  paintMpBar(); paintNetStatus(); syncUI();
+}
+
+// ── snapshots ───────────────────────────────────────────────────────────────
+const A2R=a=>a/255*TAU;
+function lerpAng(a,b,t){ let d=((b-a+Math.PI*3)%TAU)-Math.PI; return a+d*t; }
+
+function netSnapshot(s){
+  if(!NET.active||!G) return;
+  const now=performance.now();
+  // Measure the real gap between snapshots so interpolation tracks whatever the
+  // server (and the network) is actually delivering, not what we hoped for.
+  if(NET.curAt) NET.dur=Math.max(30,Math.min(400,now-NET.curAt));
+  NET.prevAt=NET.curAt; NET.curAt=now;
+
+  // Gold is per player online: G.gold is YOUR purse, NET.purses holds everyone's.
+  NET.purses=s.gp||[0,0,0,0];
+  G.gold=NET.purses[MYSEAT-1]||0;
+  G.lives=s.l; G.wave=s.w; G.prep=s.p/10;
+  G.killed=s.k; G.leaked=s.lk; G.shake=s.sh;
+  G.waveActive=!!(s.f&1); G.spawning=!!(s.f&2);
+  const wasOver=G.over;
+  G.over=!!(s.f&4); G.won=!!(s.f&8);
+  // Auto-wave is room-wide: mirror the server's flag so every player's button
+  // shows the same state, whoever pressed it.
+  const auto=!!(s.f&16);
+  if(auto!==AUTOSKIP){ AUTOSKIP=auto; paintAuto(); }
+  G.score={1:s.sc[0],2:s.sc[1],3:s.sc[2],4:s.sc[3]};
+  G.keep.hit=s.kh?.7:0;
+  G.spawnQ.length=s.q;                             // only the count matters to the UI
+  if(s.hb){ G.healBuys.bandage=s.hb[0]; G.healBuys.medkit=s.hb[1]; }
+
+  // Quest progress. The server sends this run's per-seat totals; we fold the
+  // DELTA into our saved figures. The baseline is seeded from the first
+  // snapshot we see, so rejoining a run in progress cannot double-count.
+  if(s.qp){
+    const fk=s.qp[(MYSEAT-1)*2]||0, bk=s.qp[(MYSEAT-1)*2+1]||0;
+    if(!NET.qpSeen) NET.qpSeen={f:fk,b:bk};
+    else{
+      if(fk>NET.qpSeen.f){ questBump('flyerKills',fk-NET.qpSeen.f,true); NET.qpSeen.f=fk; }
+      if(bk>NET.qpSeen.b){ questBump('bossKills',bk-NET.qpSeen.b,true); NET.qpSeen.b=bk; }
+    }
+  }
+  if(G.wave>(QP.bestWave||0)) questBump('bestWave',G.wave,false);
+
+  const D=NET.info.defs;
+  // enemies ── stride 7: id, type, x, y, hp‰, flags, blockedBy
+  const eMap=NET.ents.e, eSeen=new Set(), enemies=[];
+  for(let i=0;i<s.E.length;i+=7){
+    const id=s.E[i], type=D.EKEYS[s.E[i+1]], x=s.E[i+2], y=s.E[i+3];
+    let e=eMap.get(id);
+    if(!e){
+      const B=ENEMIES[type];
+      e={id,type,r:B.r,fly:B.fly,maxhp:255,prog:0,slowT:0,angle:0,hit:0,block:null,
+         x,y,_px:x,_py:y,_nx:x,_ny:y};
+      eMap.set(id,e);
+    }
+    e._px=e._nx; e._py=e._ny; e._nx=x; e._ny=y;
+    if(e._nx!==e._px||e._ny!==e._py) e.angle=Math.atan2(e._ny-e._py,e._nx-e._px);
+    e.hp=s.E[i+4];
+    const f=s.E[i+5];
+    e.hit=(f&1)?.12:0; e.slowT=(f&4)?1:0;
+    e._blockId=s.E[i+6];
+    e.prog+=Math.hypot(e._nx-e._px,e._ny-e._py);
+    eSeen.add(id); enemies.push(e);
+  }
+  for(const id of [...eMap.keys()]) if(!eSeen.has(id)) eMap.delete(id);
+  G.enemies=enemies;
+
+  // towers ── stride 11
+  const tMap=NET.ents.t, tSeen=new Set(), towers=[];
+  for(let i=0;i<s.T.length;i+=11){
+    const id=s.T[i], type=D.TKEYS[s.T[i+1]], c=s.T[i+2], r=s.T[i+3];
+    let t=tMap.get(id);
+    if(!t){ t={id,type,c,r,x:c*TS+TS/2,y:r*TS+TS/2,a:-Math.PI/2,_na:-Math.PI/2,_pa:-Math.PI/2,
+                cd:0,swingDir:1,spent:TOWERS[type].cost}; tMap.set(id,t); }
+    t.lvl=s.T[i+4];
+    t._pa=t._na; t._na=A2R(s.T[i+5]);
+    t.owner=s.T[i+6]; t.kills=s.T[i+7]; t.spin=s.T[i+8]/100;
+    const f=s.T[i+9];
+    t.flash=(f&1)?.06:0; t.buff=(f&2)?1.35:1; t.ramp=(f&4)?1:0;
+    t.spent=s.T[i+10];
+    tSeen.add(id); towers.push(t);
+  }
+  for(const id of [...tMap.keys()]) if(!tSeen.has(id)) tMap.delete(id);
+  G.towers=towers;
+
+  // bots ── stride 14
+  const bMap=NET.ents.b, bSeen=new Set(), bots=[];
+  for(let i=0;i<s.B.length;i+=14){
+    const id=s.B[i], kind=D.BKEYS[s.B[i+1]], x=s.B[i+2], y=s.B[i+3];
+    let b=bMap.get(id);
+    if(!b){ b={id,kind,x,y,_px:x,_py:y,_nx:x,_ny:y,a:-Math.PI/2,_pa:-Math.PI/2,_na:-Math.PI/2,
+                cd:0,swingDir:1,walk:0,respawn:0,spent:BOTS[kind].cost}; bMap.set(id,b); }
+    b._px=b._nx; b._py=b._ny; b._nx=x; b._ny=y;
+    b.rx=s.B[i+4]; b.ry=s.B[i+5];
+    b.lvl=s.B[i+6]; b.hp=s.B[i+7];
+    b._pa=b._na; b._na=A2R(s.B[i+8]);
+    b.owner=s.B[i+9]; b.kills=s.B[i+10];
+    const f=s.B[i+11];
+    b.dead=!!(f&1); b.flash=(f&2)?.16:0;
+    b.walk+=Math.hypot(b._nx-b._px,b._ny-b._py);
+    b.spent=s.B[i+12];
+    b.respawn=s.B[i+13]/10;
+    bSeen.add(id); bots.push(b);
+  }
+  for(const id of [...bMap.keys()]) if(!bSeen.has(id)) bMap.delete(id);
+  G.bots=bots;
+
+  // now that both lists exist, resolve the melee tethers
+  for(const e of G.enemies) e.block=e._blockId?bMap.get(e._blockId)||null:null;
+
+  // bullets ── stride 5
+  const uMap=NET.ents.u, uSeen=new Set(), bullets=[];
+  for(let i=0;i<s.U.length;i+=5){
+    const id=s.U[i], x=s.U[i+1], y=s.U[i+2], code=s.U[i+4];
+    let u=uMap.get(id);
+    if(!u){
+      const isBotShot=code>=100;
+      const type=code>=200?'botshot':isBotShot?'botshot':D.TKEYS[code];
+      const col=code>=200?'#ffd9a0':isBotShot?BOTS[D.BKEYS[code-100]].color:TOWERS[type].color;
+      // Splash rounds are drawn as fat shells rather than tracers; derive it
+      // from the tower type instead of paying for a wire field.
+      const splash=(!isBotShot&&TOWERS[type])?TOWERS[type].splash||0:0;
+      u={id,type,col,splash,x,y,_px:x,_py:y,_nx:x,_ny:y,rot:0};
+      uMap.set(id,u);
+    }
+    u._px=u._nx; u._py=u._ny; u._nx=x; u._ny=y;
+    u.rot=A2R(s.U[i+3]);
+    uSeen.add(id); bullets.push(u);
+  }
+  for(const id of [...uMap.keys()]) if(!uSeen.has(id)) uMap.delete(id);
+  G.bullets=bullets;
+
+  // keep guards
+  for(let i=0,n=0;i<s.Gd.length&&n<G.keep.guards.length;i+=4,n++){
+    const g=G.keep.guards[n];
+    g.x=s.Gd[i]; g.y=s.Gd[i+1]; g.a=A2R(s.Gd[i+2]); g.bob=(g.bob||0)+.08;
+    g.flash=s.Gd[i+3]?.08:0;                       // muzzle flash, was being dropped
+  }
+
+  // teammate cursors
+  for(let i=0;i<s.C.length;i+=4){
+    const seat=s.C[i], code=s.C[i+3];
+    const cur=G.cur[seat]||(G.cur[seat]={});
+    cur.c=s.C[i+1]; cur.r=s.C[i+2];
+    cur.key = code<0 ? null : code>=100 ? D.BKEYS[code-100] : D.TKEYS[code];
+  }
+
+  // keep the local selection pointed at the live object for its id
+  G.sel = NET.selId ? (tMap.get(NET.selId)||bMap.get(NET.selId)||null) : null;
+  if(!G.sel) NET.selId=0;
+
+  if(G.over&&!wasOver) netShowOutcome();
+  // The teammate strip shows live kills and purses, so it has to be repainted
+  // as those move — building it once at join left it frozen at "0  0g".
+  const now2=performance.now();
+  if(now2-(NET.barAt||0)>400){ NET.barAt=now2; paintMpBar(); }
+  syncUI();
+}
+
+// Tell the server where our build cursor is, but only when it actually moves —
+// otherwise this would be 60 messages a second of nothing.
+function netPushCursor(){
+  if(!NET.active) return;
+  const {c,r}=tileAt(mouse.x,mouse.y);
+  if(c<0||c>=COLS||r<0||r>=ROWS) return;
+  const key=G.place||null;
+  const sig=c+','+r+','+(key||'');
+  if(sig===NET.lastCursor) return;
+  NET.lastCursor=sig;
+  intent({a:'cursor',c,r,k:key});
+}
+
+// Blend between the last two snapshots so 15 Hz of network reads as 60 fps.
+function netInterpolate(){
+  if(!NET.active||!NET.curAt) return;
+  const a=clamp((performance.now()-NET.curAt)/NET.dur,0,1.4);
+  const t=Math.min(a,1);
+  for(const e of G.enemies){ e.x=e._px+(e._nx-e._px)*t; e.y=e._py+(e._ny-e._py)*t; }
+  for(const b of G.bots){
+    b.x=b._px+(b._nx-b._px)*t; b.y=b._py+(b._ny-b._py)*t;
+    b.a=lerpAng(b._pa,b._na,t);
+  }
+  for(const u of G.bullets){ u.x=u._px+(u._nx-u._px)*t; u.y=u._py+(u._ny-u._py)*t; }
+  for(const tw of G.towers) tw.a=lerpAng(tw._pa,tw._na,t);
+}
+
+// ── server events → local cosmetics ─────────────────────────────────────────
+function netEvents(list){
+  for(const ev of list){
+    // Events arrive on the socket, which keeps running when the tab is hidden
+    // and rAF is not. Cap here too, or a background tab grows forever.
+    if(G.parts.length>FXCAP.parts) capFx();
+    switch(ev.k){
+      case 'pop':   pop(ev.x,ev.y,ev.txt,ev.col); break;
+      case 'burst': burst(ev.x,ev.y,ev.col,ev.n,ev.sp); break;
+      case 'zap':   G.zaps.push({x1:ev.x1,y1:ev.y1,x2:ev.x2,y2:ev.y2,life:ev.life,col:ev.col,w:ev.w}); break;
+      case 'swing': G.swings.push({x:ev.x,y:ev.y,a:ev.a,r:ev.r,life:ev.life,max:ev.life,
+                       col:ev.col,dir:ev.dir,w:ev.w}); break;
+      case 'ring':  G.parts.push({x:ev.x,y:ev.y,vx:0,vy:0,life:.28,max:.28,col:ev.col,sz:ev.sz,ring:true}); break;
+      case 'wave':  break;
+      case 'over':  NET.outcome=ev; break;
+    }
+  }
+}
+function netShowOutcome(){
+  const o=NET.outcome;
+  showMsg(true, o?o.title:(G.won?'Line Held':'Overrun'), o?o.body:'');
+  $('msgB').textContent = NET.isHost ? 'Play again' : 'Waiting for the host…';
+  $('msgB').disabled = !NET.isHost;
+}
+
+function netLeave(){
+  NET.active=false; NET.room=null; NET.seat=0; NET.info=null;
+  netSend({type:'leave'});
+  MYSEAT=1; PLAYERS=1; AUTOMAP=true; WAVECAP=MAXWAVE;
+  paintMpBar(); paintNetStatus();
+}
+
+// ── online lobby UI ─────────────────────────────────────────────────────────
+// kitOf/kitName read the global PLAYERS, so previewing another party size means
+// borrowing it briefly — the same trick paintModes() already uses for the
+// couch lobby.
+function kitLabel(pl,n){ const save=PLAYERS; PLAYERS=n; const s=kitName(pl); PLAYERS=save; return s; }
+// Fill the map picker from whatever list we have. Called once at startup with
+// the client's own MAPS so the dropdown is never empty, then again from the
+// server's `welcome` — which is authoritative, since the server is the one that
+// actually has to honour the choice.
+function netFillMaps(maps){
+  const sel=$on('roomMap');
+  const keep=sel.value;
+  const list=(maps&&maps.length)?maps:MAPS.map(m=>m.name);
+  sel.innerHTML='<option value="random">Surprise us (random)</option>'
+    +list.map(m=>`<option value="${escHtml(m)}">${escHtml(m)}</option>`).join('');
+  if(keep) sel.value=keep;
+  if(!sel.value) sel.value='random';
+}
+function paintNetStatus(){
+  const el=$on('onNet');
+  let txt;
+  if(NET.state==='connected') txt='<span class="up">● connected</span>';
+  else if(NET.state==='connecting') txt='connecting…';
+  else if(NET.want){
+    const secs=Math.max(0,Math.ceil((NET.retryAt-performance.now())/1000));
+    txt='● offline — retrying'+(secs?' in '+secs+'s':'…')+
+        ' <button id="bRetry" style="padding:1px 7px;font-size:10.5px">retry now</button>';
+  } else txt='● offline';
+  el.innerHTML = txt + (NET.ping&&NET.state==='connected'?('  ·  '+NET.ping+' ms'):'');
+  const rb=$on('bRetry');
+  if(rb) rb.onclick=()=>{ NET.tries=0; netConnect(); };
+  const pill=$on('netPill');
+  pill.classList.toggle('on',NET.active);
+  pill.classList.toggle('bad',NET.state!=='connected');
+  $on('netTxt').textContent = NET.state==='connected'
+    ? (NET.room?NET.room.code+'  ·  '+NET.ping+'ms':'online')
+    : 'reconnecting…';
+}
+function paintRoomList(rooms){
+  const box=$on('roomList');
+  if(!rooms.length){ box.innerHTML='<div class="empty">No public games right now — host one!</div>'; return; }
+  box.innerHTML='';
+  for(const r of rooms){
+    const b=document.createElement('button');
+    b.className='rItem';
+    b.innerHTML=`<span class="rc">${r.code}</span>
+      <span class="rn">${escHtml(r.name)}<div class="rm">${r.mode} · ${escHtml(r.map)}${r.wave?' · wave '+r.wave:' · in the lobby'}</div></span>
+      <span class="rp">${r.players}/${r.partySize}</span>`;
+    b.onclick=()=>netSend({type:'join',code:r.code});
+    box.appendChild(b);
+  }
+}
+const escHtml=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function paintRoom(m){
+  const box=$on('roomBox');
+  if(!m||!NET.room){ box.style.display='none'; return; }
+  box.style.display='';
+  $on('rCode').textContent=NET.room.code;
+  $on('bStart').style.display=NET.isHost?'':'none';
+  $on('bStart').textContent=NET.room.state==='lobby'?'Start the run':'Restart the run';
+  // seats
+  const sl=$on('seatList'); sl.innerHTML='';
+  for(let s=1;s<=NET.room.partySize;s++){
+    const p=NET.roster.find(x=>x.seat===s);
+    const d=document.createElement('div');
+    d.className='seat'+(p?(p.online?'':' off'):' off')+(s===NET.seat?' me':'');
+    d.innerHTML=`<span class="dot" style="background:${PCOL[s]}"></span>
+      <span>${p?escHtml(p.name):'<i style="color:#8b98a5">open seat</i>'}${s===NET.seat?' (you)':''}</span>
+      <span class="kit">${kitLabel(s,NET.room.partySize)}</span>`;
+    sl.appendChild(d);
+  }
+  // host-only controls reflect the room, everyone else just sees the result
+  $on('roomSize').value=String(NET.room.partySize);
+  $on('roomMap').value=NET.room.map;
+  $on('roomPublic').checked=NET.room.isPublic;
+  $on('roomUnlock').checked=NET.room.allUnlocked;
+  for(const el of ['roomSize','roomMap','roomPublic','roomUnlock','roomName'])
+    $on(el).disabled=!NET.isHost||NET.room.state!=='lobby';
+  if(m.chat) { NET.chat=m.chat; paintChat(); }
+  paintMpBar();
+  paintNetStatus();
+}
+function paintChat(){
+  const html=NET.chat.map(l=>
+    `<div><b style="color:${PCOL[l.seat]||'#8b98a5'}">${escHtml(l.name)}</b> ${escHtml(l.text)}</div>`).join('');
+  for(const id of ['chatLog','mpLog']){
+    const el=$on(id); if(!el) continue;
+    el.innerHTML=html; el.scrollTop=el.scrollHeight;
+  }
+}
+function netChat(line){
+  NET.chat.push(line);
+  if(NET.chat.length>50) NET.chat.shift();
+  paintChat();
+  if(NET.active) $on('mpChat').classList.add('on');
+}
+function paintMpBar(){
+  const bar=$on('mpBar');
+  bar.classList.toggle('on',NET.active&&PLAYERS>1);
+  $on('mpChat').classList.toggle('on',NET.active);
+  if(!NET.active) return;
+  bar.innerHTML='';
+  for(let s=1;s<=PLAYERS;s++){
+    const p=NET.roster.find(x=>x.seat===s);
+    const d=document.createElement('div');
+    d.className='mpSeat'+(p&&p.online?'':' off');
+    // kills, then that player's own gold — everyone funds their own defence
+    d.innerHTML=`<span class="dot" style="background:${PCOL[s]}"></span>
+      <span>${p?escHtml(p.name):'open'}${s===MYSEAT?' (you)':''}</span>
+      <b style="color:${PCOL[s]}">${G&&G.score?G.score[s]:0}</b>
+      <span style="color:#f2c14e">${NET.purses[s-1]||0}g</span>`;
+    bar.appendChild(d);
+  }
+}
+function openOnline(){
+  $on('online').classList.remove('hide');
+  $on('hostName').value=$on('joinName').value=NET.name||netNameGet();
+  NET.want=true; NET.tries=0;
+  netConnect();
+  if(NET.state==='connected') netSend({type:'list'});
+}
+function closeOnline(){
+  $on('online').classList.add('hide');
+  // Stop reconnecting once you have gone back to local play — but keep the
+  // socket alive if a run is actually in progress.
+  if(!NET.active&&!NET.room) NET.want=false;
+}
+
+// tabs
+for(const b of document.querySelectorAll('.onTabs button')){
+  b.onclick=()=>{
+    for(const x of document.querySelectorAll('.onTabs button')) x.classList.toggle('on',x===b);
+    for(const p of document.querySelectorAll('.onPane')) p.classList.toggle('on',p.dataset.p===b.dataset.t);
+    if(b.dataset.t==='browse') netSend({type:'list'});
+  };
+}
+$on('bOnline').onclick=()=>{ closeLobby(); openOnline(); };
+// Same door, from the top bar — this is the one people actually find.
+$('bNet').onclick=()=>{ if(NET.active) return; closeLobby(); openOnline(); };
+$on('bOffline').onclick=()=>{ if(NET.room) netLeave(); closeOnline(); openLobby(); };
+$on('bRefresh').onclick=()=>netSend({type:'list'});
+$on('bCreate').onclick=()=>{
+  netNameSet(($on('hostName').value||'Player').trim().slice(0,24));
+  netSend({type:'hello',token:NET.token,name:NET.name,unlocked:[...questUnlocked()]});
+  netSend({type:'create',
+    name:($on('roomName').value||'Iron Line').trim(),
+    isPublic:$on('roomPublic').checked,
+    partySize:+$on('roomSize').value,
+    map:$on('roomMap').value,
+    allUnlocked:$on('roomUnlock').checked});
+};
+$on('bJoin').onclick=()=>{
+  netNameSet(($on('joinName').value||'Player').trim().slice(0,24));
+  netSend({type:'hello',token:NET.token,name:NET.name,unlocked:[...questUnlocked()]});
+  const code=($on('joinCode').value||'').trim().toUpperCase();
+  if(code.length<4){ $on('onErr').textContent='that code looks too short'; return; }
+  netSend({type:'join',code});
+};
+$on('joinCode').addEventListener('keydown',ev=>{ if(ev.key==='Enter') $on('bJoin').click(); });
+$on('bLeave').onclick=()=>{ netLeave(); paintRoom(null); netSend({type:'list'}); };
+$on('bStart').onclick=()=>netSend({type:NET.room&&NET.room.state==='lobby'?'start':'restart'});
+$on('bCopyLink').onclick=async()=>{
+  if(!NET.room) return;
+  const link=location.origin+location.pathname+'?room='+NET.room.code;
+  try{ await navigator.clipboard.writeText(
+    `Come hold the line with me in Iron Line — code ${NET.room.code}\n${link}`); }catch(_){}
+  $on('bCopyLink').textContent='Copied!';
+  setTimeout(()=>{ $on('bCopyLink').textContent='Copy invite link'; },1800);
+};
+for(const el of ['roomSize','roomMap','roomPublic','roomUnlock','roomName']){
+  $on(el).addEventListener('change',()=>{
+    if(!NET.isHost) return;
+    netSend({type:'setopts',
+      partySize:+$on('roomSize').value, map:$on('roomMap').value,
+      isPublic:$on('roomPublic').checked, allUnlocked:$on('roomUnlock').checked,
+      name:$on('roomName').value});
+  });
+}
+const sendChat=inp=>{
+  const t=inp.value.trim();
+  if(t){ netSend({type:'chat',text:t}); inp.value=''; }
+};
+$on('chatSay').addEventListener('keydown',ev=>{
+  ev.stopPropagation();
+  if(ev.key==='Enter') sendChat($on('chatSay'));
+});
+$on('mpSay').addEventListener('keydown',ev=>{
+  ev.stopPropagation();
+  if(ev.key==='Enter'){ sendChat($on('mpSay')); $on('mpSay').blur(); }
+  if(ev.key==='Escape') $on('mpSay').blur();
+});
+
+// keepalive + latency probe
+setInterval(()=>{
+  if(NET.ws&&NET.ws.readyState===1) netSend({type:'ping',t:performance.now()});
+  if(NET.active) paintNetStatus();
+},3000);
+
+NET.token=netTokenGet(); NET.name=netNameGet();
+// A ?room= link should land straight in the online lobby.
+if(new URLSearchParams(location.search).get('room')) setTimeout(openOnline,0);
 
 let last=performance.now(), fps=60, fpsT=0, fpsN=0;
 function frame(ts){
   let dt=Math.min((ts-last)/1000,.05); last=ts;
   fpsT+=dt; fpsN++;
   if(fpsT>=.5){ fps=fpsN/fpsT; fpsT=0; fpsN=0; if(adminOpen) paintAdmin(); }
-  if(G.slowmo) dt*=.25;
-  if((FP.on||FP.avatar)&&!G.paused) updateFP(dt);
-  if(!G.paused&&!G.over){ for(let i=0;i<G.speed;i++) update(dt); }
+  if(NET.active){
+    // The server is the simulation. All we do locally is age the cosmetics and
+    // blend between the last two snapshots.
+    G.t+=dt;
+    updateFx(dt);
+    netInterpolate();
+    netPushCursor();
+  } else {
+    if(G.slowmo) dt*=.25;
+    if((FP.on||FP.avatar)&&!G.paused) updateFP(dt);
+    if(!G.paused&&!G.over){ for(let i=0;i<G.speed;i++) update(dt); }
+  }
   draw();
   requestAnimationFrame(frame);
 }
 newGame();
 paintModes();                        // lobby is pre-built but hidden — straight into play
 paintAuto();
+paintQuests();
 requestAnimationFrame(frame);
 setInterval(()=>{
-  $('sTimer').textContent=(!G.waveActive&&!G.over&&G.wave<MAXWAVE)?'next in '+G.prep.toFixed(0)+'s':'';
+  $('sTimer').textContent=(!G.waveActive&&!G.over&&G.wave<WAVECAP)?'next in '+G.prep.toFixed(0)+'s':'';
   if(G.sel&&isBot(G.sel)) syncUI();
 },250);
-window.__G=()=>G; window.__FP=FP; window.__GL=()=>GL;
+window.__G=()=>G; window.__FP=FP; window.__GL=()=>GL; window.__NET=NET;
 window.__T={unlockSecret,gunList,rayPierce,CKEYS,WAY:()=>WAY,PATH:()=>PATH,loadMap,MAPS,randomMap,blocked:()=>blocked,KEEP,THEMES,theme:()=>THEME,topDownFire,hurt,fpFire,useChest,magOf,waveDef,deployBot,buildTower,statsOf,botStats,spawn,kill,startReload,CARRY,TOWERS,BOTS,ENEMIES,hpScale,bossHp,maxSquads,selectSlot,cycleSlot}; Object.defineProperty(window,'__fps',{get:()=>fps});
 })();
 </script>

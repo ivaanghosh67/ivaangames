@@ -1,2 +1,9 @@
 # Local Claude Code settings (machine-specific, not shared)
 .claude/settings.local.json
+
+# Node dependencies for the multiplayer server
+node_modules/
+
+# Local scratch
+*.log
+.DS_Store

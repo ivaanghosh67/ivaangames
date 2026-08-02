@@ -1,0 +1,33 @@
+[Unit]
+Description=Iron Line - online co-op game server (WebSocket, authoritative sim)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=8092
+Environment=MAX_ROOMS=200
+Environment=IRONLINE_DATA_DIR=/var/lib/ironline/analytics
+WorkingDirectory=/opt/ironline
+ExecStart=/usr/bin/node /opt/ironline/server.js
+Restart=on-failure
+RestartSec=2
+
+# Game state lives in memory; the only thing written to disk is the analytics
+# trail, and that is the one path this unit may write to.
+StateDirectory=ironline
+ReadWritePaths=/var/lib/ironline
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target
