@@ -101,7 +101,7 @@ async function main() {
   console.log(`duration            ${secs.toFixed(1)}s`);
   console.log(`wave reached        ${s.w}`);
   console.log(`enemies killed      ${s.k}`);
-  console.log(`towers standing     ${s.T.length / 11}`);
+  console.log(`towers standing     ${s.T.length / 12}`);
   console.log(`bots deployed       ${s.B.length / 14}`);
   console.log(`peak enemies        ${peakEnemies}`);
   console.log(`build attempts      ${builds}`);

@@ -270,6 +270,11 @@
           <label class="sRow"><input type="checkbox" data-s="parts" checked> Particle effects</label>
           <label class="sRow"><input type="checkbox" data-s="fps"> Show FPS</label>
         </div>
+        <div class="sGrp"><h5>Sound</h5>
+          <label class="sRow"><input type="checkbox" data-s="sound" checked> Sound effects</label>
+          <div class="sRow"><input type="range" id="sVol" min="0" max="100" step="5"
+            style="flex:1;accent-color:#4aa8ff"><span id="sVolTxt" style="width:3em;text-align:right"></span></div>
+        </div>
         <div class="sGrp" id="sMulti"><h5>Multiplayer</h5>
           <label class="sRow"><input type="checkbox" data-s="cursors" checked> Teammates' build cursors</label>
           <label class="sRow"><input type="checkbox" data-s="chat" checked> Chat box on screen</label>
@@ -483,6 +488,8 @@
       <div class="row"><span>Rate</span><span id="iRate">0</span></div>
       <div class="row"><span>Kills</span><span id="iKills">0</span></div>
       <div class="up" id="iUp"></div>
+      <div class="row" id="rTarget"><span>Targets</span>
+        <button id="bTarget" style="padding:2px 8px;font-size:11px">First</button></div>
       <button id="bUp" class="primary">Upgrade</button>
       <button id="bSell">Sell</button>
     </div>
@@ -657,7 +664,7 @@ function questBump(stat,value,cumulative){
       UNLOCKED.add(q.gun); saveUnlocks();
       pop(W/2,140,'🔓 '+TOWERS[q.gun].name+' UNLOCKED','#ffe066');
       pop(W/2,168,'quest complete — '+q.name,'#9fd8ff');
-      burst(W/2,H/2,'#ffe066',40,220);
+      burst(W/2,H/2,'#ffe066',40,220); SOUND.unlock();
     }
   }
   if(after.size!==before.size) paintQuests();
@@ -872,6 +879,7 @@ function startWave(early){
   G.spawnQ=q; G.spawnT=0; syncUI();
 }
 function spawn(type){
+  if(type==='boss'||type==='ultra') SOUND.boss();
   if(type==='ultra'){
     G.shake=22;
     if(!G.ultraWarned){ G.ultraWarned=true;
@@ -914,11 +922,13 @@ function kill(e,src){
   if(e.type==='boss') G.shake=14;
   if(e.type==='ultra'){ G.shake=30; burst(e.x,e.y,'#ff2d6f',90,340);
     pop(W/2,120,'ULTRA BOSS DOWN','#ff2d6f'); }
+  SOUND.kill(); if(jack) SOUND.gold();
   syncUI();
 }
 function leak(e){
   const i=G.enemies.indexOf(e); if(i<0) return;
   G.enemies.splice(i,1); G.leaked++;
+  SOUND.leak();
   const d=e.type==='ultra'?25:e.type==='boss'?10:1;
   if(!G.admin.god) G.lives-=d;
   G.shake=Math.max(G.shake,8); G.keep.hit=.7;
@@ -976,12 +986,20 @@ function update(dt){
   for(const t of G.towers){
     const B=TOWERS[t.type], s=statsOf(t.type,t.lvl);
     t.cd-=dt; if(t.flash>0) t.flash-=dt;
-    let best=null,bp=-1;
+    let best=null,bs=-Infinity;
     for(const e of G.enemies){
       if(e.fly&&!B.air) continue;
       if(!e.fly&&B.noGround) continue;
-      if(dist(t.x,t.y,e.x,e.y)>s.range+e.r) continue;
-      if(e.prog>bp){ bp=e.prog; best=e; }
+      const d=dist(t.x,t.y,e.x,e.y);
+      if(d>s.range+e.r) continue;
+      let score;
+      switch(t.tmode){
+        case 1: score=-e.prog; break;   // last
+        case 2: score=e.hp;    break;   // strongest
+        case 3: score=-d;      break;   // closest
+        default: score=e.prog;          // first
+      }
+      if(score>bs){ bs=score; best=e; }
     }
     // gun crews standing nearby load faster for this turret (best crew applies, they don't stack)
     let crewBuff=1;
@@ -1028,7 +1046,7 @@ function update(dt){
     spawnChest();
     const bonus=Math.round((25+20*G.wave)*(.8+Math.random()*.4));
     G.gold+=bonus;
-    pop(W/2,92,'Wave '+G.wave+' cleared  +'+bonus,'#6ee7a8');
+    pop(W/2,92,'Wave '+G.wave+' cleared  +'+bonus,'#6ee7a8'); SOUND.cleared();
     if(G.wave>=WAVECAP){
       G.over=true; G.won=true;
       const got=unlockRandom();
@@ -1188,6 +1206,7 @@ function updateKeep(dt){
 
 function fire(t,s,tgt){
   const B=TOWERS[t.type];
+  if(B.melee) SOUND.melee(); else SOUND.shot(t.type);
   const mx=t.x+Math.cos(t.a)*15, my=t.y+Math.sin(t.a)*15;
   if(B.melee){
     t.swingDir=-(t.swingDir||1);
@@ -3353,7 +3372,7 @@ function buildTower(k,c,r,owner,px,py){
   if(!spend(cost)){ pop(px,py,'need '+cost+'g','#e5534b'); return null; }
   const t={type:k,c,r,x:c*TS+TS/2,y:r*TS+TS/2,lvl:1,cd:0,a:-Math.PI/2,
     kills:0,spent:cost,flash:0,spin:0,swingDir:1,ramp:0,owner};
-  G.towers.push(t); burst(t.x,t.y,TOWERS[k].color,10,90);
+  G.towers.push(t); burst(t.x,t.y,TOWERS[k].color,10,90); SOUND.build();
   return t;
 }
 function deployBot(k,x,y,owner){
@@ -3363,7 +3382,7 @@ function deployBot(k,x,y,owner){
   if(!spend(D.cost)){ pop(x,y,'need '+D.cost+'g','#e5534b'); return null; }
   const b={kind:k,x,y,rx:x,ry:y,lvl:1,hp:D.hp,cd:0,a:-Math.PI/2,
     kills:0,spent:D.cost,flash:0,dead:false,respawn:0,swingDir:1,owner};
-  G.bots.push(b); burst(x,y,D.color,14,110);
+  G.bots.push(b); burst(x,y,D.color,14,110); SOUND.build();
   return b;
 }
 function buyHeal(k){
@@ -3459,6 +3478,15 @@ function syncUI(){
       $('iRate').textContent=s.rate.toFixed(2)+'/s'+(D.spinup?' (spins up)':'');
     }
     $('iKills').textContent=u.kills;
+    // Targeting priority is a turret concept; bots chase whatever is nearest.
+    const showT=!isBot(u);
+    $('rTarget').style.display=showT?'flex':'none';
+    if(showT){
+      const m=u.tmode||0;
+      $('bTarget').textContent=TMODES[m];
+      $('bTarget').title='Targets the enemy '+TMODE_HINT[m]+' — click to change';
+      $('bTarget').disabled=NET.active&&u.owner!==MYSEAT;
+    }
     // Online, only the owner may upgrade or sell — say so on the buttons rather
     // than letting the click travel and come back refused.
     const mineU = !NET.active || u.owner===MYSEAT;
@@ -3583,8 +3611,19 @@ cv.addEventListener('contextmenu',ev=>{ ev.preventDefault();
 $('bWave').onclick=()=>{ if(NET.active) intent({a:'wave'}); else startWave(true); };
 $('bPause').onclick=()=>{ if(NET.active) return; G.paused=!G.paused; syncUI(); };
 $('bSpeed').onclick=()=>{ if(NET.active) return; G.speed=G.speed>=4?1:G.speed+1; syncUI(); };
+const TMODES=['First','Last','Strongest','Closest'];
+const TMODE_HINT=['furthest along the road','least far along','most health left','nearest this turret'];
+$('bTarget').onclick=()=>{
+  const u=G.sel; if(!u||isBot(u)) return;
+  if(NET.active&&u.owner!==MYSEAT) return;
+  const next=((u.tmode||0)+1)%4;
+  SOUND.ui();
+  if(NET.active) intent({a:'target',id:u.id,mode:next});
+  else { u.tmode=next; syncUI(); }
+};
 $('bUp').onclick=()=>{
   const u=G.sel; if(!u||u.lvl>=MAXLVL) return;
+  SOUND.upgrade();
   if(NET.active){ intent({a:'upgrade',id:u.id}); return; }
   const c=upCost(u); if(!spend(c)) return;
   u.lvl++; u.spent+=c;
@@ -3593,6 +3632,7 @@ $('bUp').onclick=()=>{
 };
 $('bSell').onclick=()=>{
   const u=G.sel; if(!u) return;
+  SOUND.sell();
   if(NET.active){ intent({a:'sell',id:u.id}); NET.selId=0; return; }
   const back=Math.floor(u.spent*.6); G.gold+=back;
   pop(u.x,u.y,'+'+back,'#f2c14e'); burst(u.x,u.y,'#8b98a5',10,90);
@@ -3607,13 +3647,142 @@ $('msgB').onclick=()=>{
 };
 
 // ───────────────────────────── admin panel (it's your game — cheat freely)
+// ───────────────────────────── sound
+//
+// Everything is synthesised with Web Audio rather than loaded from files. The
+// game is deliberately one self-contained HTML file that runs from disk with no
+// server — shipping audio assets would break that, and a handful of oscillators
+// costs nothing.
+//
+// Browsers refuse to start audio before a user gesture, so the context is
+// created lazily on the first click or keypress.
+const SFX={
+  ctx:null, master:null, vol:0.5, muted:false, ready:false,
+  // Voice limiting: a wave can produce dozens of shots per frame and stacking
+  // them all is both ugly and expensive. Each kind gets a minimum spacing.
+  last:{}, budget:0, budgetAt:0,
+};
+try{
+  const v=localStorage.getItem('ironline.vol');
+  if(v!==null) SFX.vol=Math.max(0,Math.min(1,+v||0));
+  SFX.muted=localStorage.getItem('ironline.muted')==='1';
+}catch(_){}
+
+function sfxInit(){
+  if(SFX.ready||SFX.ctx) return;
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC) return;
+  try{
+    SFX.ctx=new AC();
+    SFX.master=SFX.ctx.createGain();
+    SFX.master.gain.value=SFX.muted?0:SFX.vol;
+    SFX.master.connect(SFX.ctx.destination);
+    SFX.ready=true;
+  }catch(_){ SFX.ctx=null; }
+}
+function sfxVolume(v,muted){
+  if(v!==undefined) SFX.vol=Math.max(0,Math.min(1,v));
+  if(muted!==undefined) SFX.muted=!!muted;
+  try{ localStorage.setItem('ironline.vol',String(SFX.vol));
+       localStorage.setItem('ironline.muted',SFX.muted?'1':'0'); }catch(_){}
+  if(SFX.master) SFX.master.gain.value=SFX.muted?0:SFX.vol;
+}
+// A rate limiter so a hundred simultaneous turrets do not produce a hundred
+// voices — the ear cannot tell, and the audio thread very much can.
+function sfxAllow(kind,gapMs){
+  if(!SFX.ready||SFX.muted||SFX.vol<=0) return false;
+  const now=performance.now();
+  if(now-SFX.budgetAt>100){ SFX.budgetAt=now; SFX.budget=0; }
+  if(SFX.budget>=14) return false;               // hard ceiling per 100 ms
+  if(now-(SFX.last[kind]||0)<gapMs) return false;
+  SFX.last[kind]=now; SFX.budget++;
+  return true;
+}
+/** One shaped oscillator note. */
+function sfxTone({freq=440,to=null,type='square',dur=0.08,gain=0.2,delay=0}={}){
+  const c=SFX.ctx, t=c.currentTime+delay;
+  const o=c.createOscillator(), g=c.createGain();
+  o.type=type; o.frequency.setValueAtTime(freq,t);
+  if(to) o.frequency.exponentialRampToValueAtTime(Math.max(20,to),t+dur);
+  g.gain.setValueAtTime(0,t);
+  g.gain.linearRampToValueAtTime(gain,t+0.008);
+  g.gain.exponentialRampToValueAtTime(0.0008,t+dur);
+  o.connect(g); g.connect(SFX.master);
+  o.start(t); o.stop(t+dur+0.02);
+}
+/** Filtered noise, for impacts and explosions. */
+function sfxNoiseBurst({dur=0.15,gain=0.2,freq=900,q=1,type='lowpass',delay=0}={}){
+  const c=SFX.ctx, t=c.currentTime+delay;
+  const n=Math.max(1,Math.floor(c.sampleRate*dur));
+  const buf=c.createBuffer(1,n,c.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n);
+  const src=c.createBufferSource(); src.buffer=buf;
+  const f=c.createBiquadFilter(); f.type=type; f.frequency.value=freq; f.Q.value=q;
+  const g=c.createGain();
+  g.gain.setValueAtTime(gain,t);
+  g.gain.exponentialRampToValueAtTime(0.0008,t+dur);
+  src.connect(f); f.connect(g); g.connect(SFX.master);
+  src.start(t); src.stop(t+dur+0.02);
+}
+
+const SOUND={
+  shot:t=>{ if(!sfxAllow('shot',38)) return;
+    const f={pistol:760,gatling:520,minigun:300,launcher:200,sniper:1100,
+             flak:640,laser:1500,railgun:180,plasma:260}[t]||700;
+    if(t==='laser') sfxTone({freq:f,to:f*1.6,type:'sawtooth',dur:.06,gain:.05});
+    else if(t==='railgun'){ sfxTone({freq:f,to:f*.4,type:'sawtooth',dur:.22,gain:.16});
+                            sfxNoiseBurst({dur:.18,gain:.10,freq:1800,type:'highpass'}); }
+    else sfxTone({freq:f,to:f*.6,type:'square',dur:.05,gain:.07}); },
+  melee:()=>{ if(!sfxAllow('melee',70)) return;
+    sfxNoiseBurst({dur:.12,gain:.10,freq:2600,type:'highpass'}); },
+  splash:()=>{ if(!sfxAllow('splash',60)) return;
+    sfxNoiseBurst({dur:.28,gain:.20,freq:420}); sfxTone({freq:110,to:45,type:'sine',dur:.24,gain:.13}); },
+  kill:()=>{ if(!sfxAllow('kill',45)) return;
+    sfxNoiseBurst({dur:.09,gain:.07,freq:700}); },
+  gold:()=>{ if(!sfxAllow('gold',110)) return;
+    sfxTone({freq:1250,type:'triangle',dur:.05,gain:.05});
+    sfxTone({freq:1870,type:'triangle',dur:.06,gain:.04,delay:.04}); },
+  build:()=>{ if(!sfxAllow('build',40)) return;
+    sfxTone({freq:300,to:620,type:'triangle',dur:.11,gain:.16}); },
+  upgrade:()=>{ if(!sfxAllow('upgrade',40)) return;
+    sfxTone({freq:520,type:'triangle',dur:.09,gain:.14});
+    sfxTone({freq:780,type:'triangle',dur:.11,gain:.12,delay:.07}); },
+  sell:()=>{ if(!sfxAllow('sell',40)) return;
+    sfxTone({freq:640,to:260,type:'triangle',dur:.14,gain:.13}); },
+  deny:()=>{ if(!sfxAllow('deny',140)) return;
+    sfxTone({freq:200,to:150,type:'square',dur:.13,gain:.10}); },
+  leak:()=>{ if(!sfxAllow('leak',90)) return;
+    sfxTone({freq:340,to:120,type:'sawtooth',dur:.3,gain:.20});
+    sfxNoiseBurst({dur:.22,gain:.12,freq:500}); },
+  boss:()=>{ if(!sfxAllow('boss',600)) return;
+    sfxTone({freq:70,to:44,type:'sawtooth',dur:1.1,gain:.26});
+    sfxTone({freq:104,to:66,type:'square',dur:1.0,gain:.13,delay:.06});
+    sfxNoiseBurst({dur:.7,gain:.14,freq:260}); },
+  wave:()=>{ if(!sfxAllow('wave',400)) return;
+    sfxTone({freq:300,to:460,type:'triangle',dur:.22,gain:.14}); },
+  cleared:()=>{ if(!sfxAllow('cleared',400)) return;
+    [523,659,784].forEach((f,i)=>sfxTone({freq:f,type:'triangle',dur:.3,gain:.13,delay:i*.075})); },
+  won:()=>{ if(!sfxAllow('won',1000)) return;
+    [523,659,784,1047].forEach((f,i)=>sfxTone({freq:f,type:'triangle',dur:.5,gain:.18,delay:i*.13})); },
+  lost:()=>{ if(!sfxAllow('lost',1000)) return;
+    [392,311,262].forEach((f,i)=>sfxTone({freq:f,type:'sawtooth',dur:.6,gain:.18,delay:i*.18})); },
+  unlock:()=>{ if(!sfxAllow('unlock',800)) return;
+    [659,880,1319].forEach((f,i)=>sfxTone({freq:f,type:'triangle',dur:.4,gain:.16,delay:i*.1})); },
+  ui:()=>{ if(!sfxAllow('ui',50)) return;
+    sfxTone({freq:900,type:'triangle',dur:.03,gain:.05}); },
+};
+// Audio may only start from a gesture, so arm it on the first interaction.
+for(const ev of ['pointerdown','keydown'])
+  addEventListener(ev,()=>{ sfxInit(); if(SFX.ctx&&SFX.ctx.state==='suspended') SFX.ctx.resume(); },
+    {once:false,passive:true});
+
 // ───────────────────────────── settings
 // Display and quality-of-life only — nothing here changes the simulation, so it
 // is safe to leave available in a shared game. Cheats stay behind the offline
 // admin panel.
 const SETKEY='ironline.settings';
 const SET={ranges:false,hpbars:true,floaters:true,shake:true,parts:true,fps:false,
-           cursors:true,chat:true};
+           cursors:true,chat:true,sound:true};
 try{ const s=JSON.parse(localStorage.getItem(SETKEY)||'{}');
      for(const k in SET) if(typeof s[k]==='boolean') SET[k]=s[k]; }catch(_){}
 function saveSettings(){ try{ localStorage.setItem(SETKEY,JSON.stringify(SET)); }catch(_){} }
@@ -3629,6 +3798,8 @@ function toggleSettings(on){
 function paintSettings(){
   for(const el of document.querySelectorAll('#settings input[data-s]'))
     el.checked=!!SET[el.dataset.s];
+  const vs=$('sVol');
+  if(vs){ vs.value=Math.round(SFX.vol*100); $('sVolTxt').textContent=Math.round(SFX.vol*100)+'%'; }
   // multiplayer-only rows, and cheats only when there is nobody else to spoil
   $('sMulti').style.display=NET.active?'':'none';
   $('sCheatGrp').style.display=NET.active?'none':'';
@@ -3640,8 +3811,17 @@ for(const el of document.querySelectorAll('#settings input[data-s]')){
   el.addEventListener('change',()=>{
     SET[el.dataset.s]=el.checked; saveSettings();
     if(el.dataset.s==='chat') $('mpChat').classList.toggle('on',NET.active&&SET.chat);
+    if(el.dataset.s==='sound'){ sfxInit(); sfxVolume(undefined,!el.checked); if(el.checked) SOUND.ui(); }
   });
 }
+$('sVol').addEventListener('input',()=>{
+  sfxInit();
+  sfxVolume(+$('sVol').value/100, false);
+  SET.sound=true; saveSettings();
+  $('sVolTxt').textContent=$('sVol').value+'%';
+  document.querySelector('#settings input[data-s="sound"]').checked=true;
+});
+$('sVol').addEventListener('change',()=>SOUND.ui());
 $('sClose').onclick=()=>toggleSettings(false);
 $('sOpenAdmin').onclick=()=>{ toggleSettings(false); toggleAdmin(true); };
 $('sResetQuests').onclick=()=>{
@@ -4124,7 +4304,7 @@ function netHandle(m){
     case 'chat': netChat(m.line); break;
     case 'deny':
       // The server refused an action — surface it exactly like the local game does
-      if(m.why) pop(W/2,150,m.why,'#e5534b');
+      if(m.why){ pop(W/2,150,m.why,'#e5534b'); SOUND.deny(); }
       break;
     case 'error': {
       $on('onErr').textContent=m.why||'something went wrong';
@@ -4238,9 +4418,9 @@ function netSnapshot(s){
   for(const id of [...eMap.keys()]) if(!eSeen.has(id)) eMap.delete(id);
   G.enemies=enemies;
 
-  // towers ── stride 11
+  // towers ── stride 12
   const tMap=NET.ents.t, tSeen=new Set(), towers=[];
-  for(let i=0;i<s.T.length;i+=11){
+  for(let i=0;i<s.T.length;i+=12){
     const id=s.T[i], type=D.TKEYS[s.T[i+1]], c=s.T[i+2], r=s.T[i+3];
     let t=tMap.get(id);
     if(!t){ t={id,type,c,r,x:c*TS+TS/2,y:r*TS+TS/2,a:-Math.PI/2,_na:-Math.PI/2,_pa:-Math.PI/2,
@@ -4251,6 +4431,7 @@ function netSnapshot(s){
     const f=s.T[i+9];
     t.flash=(f&1)?.06:0; t.buff=(f&2)?1.35:1; t.ramp=(f&4)?1:0;
     t.spent=s.T[i+10];
+    t.tmode=s.T[i+11]||0;
     tSeen.add(id); towers.push(t);
   }
   for(const id of [...tMap.keys()]) if(!tSeen.has(id)) tMap.delete(id);
@@ -4295,6 +4476,7 @@ function netSnapshot(s){
       const splash=(!isBotShot&&TOWERS[type])?TOWERS[type].splash||0:0;
       u={id,type,col,splash,x,y,_px:x,_py:y,_nx:x,_ny:y,rot:0};
       uMap.set(id,u);
+      if(!isBotShot) SOUND.shot(type);
     }
     u._px=u._nx; u._py=u._ny; u._nx=x; u._ny=y;
     u.rot=A2R(s.U[i+3]);
@@ -4364,14 +4546,23 @@ function netEvents(list){
     // and rAF is not. Cap here too, or a background tab grows forever.
     if(G.parts.length>FXCAP.parts) capFx();
     switch(ev.k){
-      case 'pop':   pop(ev.x,ev.y,ev.txt,ev.col); break;
-      case 'burst': burst(ev.x,ev.y,ev.col,ev.n,ev.sp); break;
-      case 'zap':   G.zaps.push({x1:ev.x1,y1:ev.y1,x2:ev.x2,y2:ev.y2,life:ev.life,col:ev.col,w:ev.w}); break;
+      case 'pop':
+        pop(ev.x,ev.y,ev.txt,ev.col);
+        if(/JACKPOT/.test(ev.txt)) SOUND.gold();
+        else if(/♥/.test(ev.txt)&&/-/.test(ev.txt)) SOUND.leak();
+        else if(/cleared/.test(ev.txt)) SOUND.cleared();
+        break;
+      case 'burst': burst(ev.x,ev.y,ev.col,ev.n,ev.sp); if(ev.n>=14) SOUND.kill(); break;
+      case 'zap':
+        G.zaps.push({x1:ev.x1,y1:ev.y1,x2:ev.x2,y2:ev.y2,life:ev.life,col:ev.col,w:ev.w});
+        SOUND.shot(ev.w>=3?'railgun':ev.w<=2?'laser':'sniper');
+        break;
       case 'swing': G.swings.push({x:ev.x,y:ev.y,a:ev.a,r:ev.r,life:ev.life,max:ev.life,
-                       col:ev.col,dir:ev.dir,w:ev.w}); break;
-      case 'ring':  G.parts.push({x:ev.x,y:ev.y,vx:0,vy:0,life:.28,max:.28,col:ev.col,sz:ev.sz,ring:true}); break;
-      case 'wave':  break;
-      case 'over':  NET.outcome=ev; break;
+                       col:ev.col,dir:ev.dir,w:ev.w}); SOUND.melee(); break;
+      case 'ring':  G.parts.push({x:ev.x,y:ev.y,vx:0,vy:0,life:.28,max:.28,col:ev.col,sz:ev.sz,ring:true});
+                    SOUND.splash(); break;
+      case 'wave':  SOUND.wave(); break;
+      case 'over':  NET.outcome=ev; (ev.won?SOUND.won:SOUND.lost)(); break;
     }
   }
 }
@@ -4651,6 +4842,7 @@ setInterval(()=>{
   if(NET.active) paintNetStatus();
 },3000);
 
+sfxVolume(SFX.vol, !SET.sound || SFX.muted);
 NET.token=netTokenGet(); NET.name=netNameGet();
 // A ?room= link should land straight in the online lobby.
 if(new URLSearchParams(location.search).get('room')) setTimeout(openOnline,0);
@@ -4685,7 +4877,8 @@ setInterval(()=>{
   $('sTimer').textContent=(!G.waveActive&&!G.over&&G.wave<WAVECAP)?'next in '+G.prep.toFixed(0)+'s':'';
   if(G.sel&&isBot(G.sel)) syncUI();
 },250);
-window.__G=()=>G; window.__FP=FP; window.__GL=()=>GL; window.__NET=NET;
+window.__G=()=>G; window.__FP=FP; window.__GL=()=>GL; window.__NET=NET; window.__SFX=SFX; window.__SOUND=SOUND;
+window.__sfxInit=sfxInit; window.__sfxVolume=sfxVolume; window.__sfxAllow=sfxAllow;
 window.__T={unlockSecret,gunList,rayPierce,CKEYS,WAY:()=>WAY,PATH:()=>PATH,loadMap,MAPS,randomMap,blocked:()=>blocked,KEEP,THEMES,theme:()=>THEME,topDownFire,hurt,fpFire,useChest,magOf,waveDef,deployBot,buildTower,statsOf,botStats,spawn,kill,startReload,CARRY,TOWERS,BOTS,ENEMIES,hpScale,bossHp,maxSquads,selectSlot,cycleSlot}; Object.defineProperty(window,'__fps',{get:()=>fps});
 })();
 </script>

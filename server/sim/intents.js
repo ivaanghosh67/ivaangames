@@ -135,6 +135,14 @@ export function applyIntent(sim, seat, msg) {
       return { ok:true, changed:true };
     }
 
+    case 'target': {
+      const u = sim.unitById(msg.id | 0);
+      if (!u || isBotUnit(u)) return { ok:false, why:'not a turret' };
+      if (u.owner !== seat) return { ok:false, why:"that's Player " + u.owner + "'s unit" };
+      u.tmode = Math.max(0, Math.min(3, msg.mode | 0));
+      return { ok:true, changed:true };
+    }
+
     case 'heal': {
       const k = String(msg.k || '');
       const Hh = asHeal(k);

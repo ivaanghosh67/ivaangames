@@ -53,6 +53,7 @@ export function encodeSnapshot(sim, tick) {
       Math.round((t.spin || 0) * 100),
       (t.flash > 0 ? 1 : 0) | (t.buff > 1 ? 2 : 0) | ((t.ramp || 0) > 0 ? 4 : 0),
       t.spent,                                  // so the client's sell price is exact
+      t.tmode || 0,                             // targeting priority
     );
   }
 

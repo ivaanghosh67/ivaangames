@@ -85,7 +85,7 @@ function mkClient(name) {
 }
 
 // ── invariant checks, run against every snapshot ────────────────────────────
-const STRIDE = { E: 7, T: 11, B: 14, U: 5, Gd: 4, C: 4 };
+const STRIDE = { E: 7, T: 12, B: 14, U: 5, Gd: 4, C: 4 };
 
 function checkSnapshot(s, ctx, map, partySize) {
   // wire format

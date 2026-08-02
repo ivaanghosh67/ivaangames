@@ -393,12 +393,24 @@ export class Sim {
     for (const t of G.towers) {
       const B = TOWERS[t.type], s = statsOf(t.type, t.lvl);
       t.cd -= dt; if (t.flash > 0) t.flash -= dt;
-      let best = null, bp = -1;
+      // Targeting priority. 0 first (furthest along the road) is the default
+      // and the right answer most of the time; the others matter for specific
+      // jobs — `strongest` to focus a boss, `closest` to stop a leak at the
+      // last moment, `last` to soften what the front line has not reached yet.
+      let best = null, bs = -Infinity;
       for (const e of G.enemies) {
         if (e.fly && !B.air) continue;
         if (!e.fly && B.noGround) continue;
-        if (dist(t.x, t.y, e.x, e.y) > s.range + e.r) continue;
-        if (e.prog > bp) { bp = e.prog; best = e; }
+        const d = dist(t.x, t.y, e.x, e.y);
+        if (d > s.range + e.r) continue;
+        let score;
+        switch (t.tmode) {
+          case 1: score = -e.prog; break;      // last: least far along
+          case 2: score = e.hp; break;         // strongest: most health left
+          case 3: score = -d; break;           // closest to this turret
+          default: score = e.prog;             // first: furthest along
+        }
+        if (score > bs) { bs = score; best = e; }
       }
       // gun crews standing nearby load faster for this turret (best crew applies)
       let crewBuff = 1;

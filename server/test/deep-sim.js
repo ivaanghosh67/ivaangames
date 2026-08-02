@@ -95,7 +95,7 @@ function checkSim(sim, ctx, partySize) {
   // the snapshot encoder must survive whatever state we are in
   try {
     const snap = encodeSnapshot(sim, 0);
-    if (snap.T.length % 11) violate(ctx, 'snapshot tower stride broken', `${snap.T.length}`);
+    if (snap.T.length % 12) violate(ctx, 'snapshot tower stride broken', `${snap.T.length}`);
     if (snap.B.length % 14) violate(ctx, 'snapshot bot stride broken', `${snap.B.length}`);
     if (snap.E.length % 7) violate(ctx, 'snapshot enemy stride broken', `${snap.E.length}`);
     if (snap.U.length % 5) violate(ctx, 'snapshot bullet stride broken', `${snap.U.length}`);

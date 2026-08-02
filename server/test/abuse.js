@@ -97,7 +97,7 @@ async function main() {
   await sleep(600);
   s = a.last.s.s;
   ok(s.gp[0] >= 0, `purse never went negative buying miniguns (${s.gp[0]})`);
-  ok(s.T.length / 11 <= Math.floor(before / 500), 'no more towers than the purse could pay for');
+  ok(s.T.length / 12 <= Math.floor(before / 500), 'no more towers than the purse could pay for');
 
   // ── negative and absurd numbers ──
   a.send({ type: 'i', a: 'build', k: 'pistol', c: -5, r: -5 });

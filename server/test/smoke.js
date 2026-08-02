@@ -139,7 +139,7 @@ async function main() {
   // (a sniper at 130g, not a railgun — you only start with 250)
   guest.send({ type: 'i', a: 'build', k: 'sniper', c: 8, r: 6 });
   await sleep(300);
-  ok(guest.last.s.s.T.length >= 11, 'seat 2 can build a gun (arsenal is shared)');
+  ok(guest.last.s.s.T.length >= 12, 'seat 2 can build a gun (arsenal is shared)');
   ok(guest.last.s.s.T[1] === started.info.defs.TKEYS.indexOf('sniper'), 'and it really is the sniper');
   guest.send({ type: 'i', a: 'sell', id: guest.last.s.s.T[0] });
   await sleep(300);
@@ -148,10 +148,10 @@ async function main() {
   host.send({ type: 'i', a: 'build', k: 'pistol', c: 3, r: 3 });
   await sleep(300);
   let snap = host.last.s.s;
-  const towerIdx = [...Array(snap.T.length / 11).keys()].find(i => snap.T[i * 11 + 3] === 3);
+  const towerIdx = [...Array(snap.T.length / 12).keys()].find(i => snap.T[i * 12 + 3] === 3);
   ok(towerIdx !== undefined, 'host tower exists in the snapshot');
-  const towerId = snap.T[towerIdx * 11];
-  ok(snap.T[towerIdx * 11 + 6] === 1, 'tower is attributed to seat 1');
+  const towerId = snap.T[towerIdx * 12];
+  ok(snap.T[towerIdx * 12 + 6] === 1, 'tower is attributed to seat 1');
 
   // per-player purses: seat 2 pays for seat 2's blade, seat 1 is untouched
   const before = host.last.s.s.gp.slice();
@@ -181,8 +181,8 @@ async function main() {
   host.send({ type: 'i', a: 'upgrade', id: towerId });
   await sleep(300);
   snap = host.last.s.s;
-  const upIdx = [...Array(snap.T.length / 11).keys()].find(i => snap.T[i * 11] === towerId);
-  ok(upIdx !== undefined && snap.T[upIdx * 11 + 4] === 2, 'the owner upgraded it to level 2');
+  const upIdx = [...Array(snap.T.length / 12).keys()].find(i => snap.T[i * 12] === towerId);
+  ok(upIdx !== undefined && snap.T[upIdx * 12 + 4] === 2, 'the owner upgraded it to level 2');
   ok(snap.gp[0] < beforeUp[0], "and it came out of the owner's purse");
   ok(snap.gp[1] === beforeUp[1], "seat 2's purse was untouched");
 
@@ -193,6 +193,22 @@ async function main() {
   ok(snap.w === 1, 'wave counter advanced to 1');
   ok(snap.E.length > 0, 'enemies are on the field');
   ok((snap.f & 1) === 1, 'waveActive flag is set');
+
+  // ── targeting priority ──
+  {
+    const idx = [...Array(host.last.s.s.T.length / 12).keys()].find(i => host.last.s.s.T[i * 12] === towerId);
+    ok(idx !== undefined && host.last.s.s.T[idx * 12 + 11] === 0, 'turrets default to First targeting');
+    host.send({ type: 'i', a: 'target', id: towerId, mode: 2 });
+    await sleep(300);
+    const snap2 = host.last.s.s;
+    const i2 = [...Array(snap2.T.length / 12).keys()].find(i => snap2.T[i * 12] === towerId);
+    ok(i2 !== undefined && snap2.T[i2 * 12 + 11] === 2, 'targeting priority changes to Strongest');
+    guest.send({ type: 'i', a: 'target', id: towerId, mode: 1 });
+    const td = await guest.wait('deny');
+    ok(/Player 1/.test(td.why), "another seat cannot retarget someone else's turret");
+    host.send({ type: 'i', a: 'target', id: towerId, mode: 0 });
+    await sleep(200);
+  }
 
   // ── quests gate the heavy weapons, per seat ──
   host.send({ type: 'i', a: 'build', k: 'plasma', c: 12, r: 9 });
@@ -272,7 +288,7 @@ async function main() {
   await earned.wait('s');
   earned.send({ type: 'i', a: 'build', k: 'flak', c: 3, r: 3 });
   await sleep(500);
-  ok(earned.last.s.s.T.length >= 11, 'a player who earned the Flak Cannon can build it');
+  ok(earned.last.s.s.T.length >= 12, 'a player who earned the Flak Cannon can build it');
   earned.send({ type: 'i', a: 'build', k: 'laser', c: 5, r: 5 });
   const stillLocked = await earned.wait('deny');
   ok(/quest/i.test(stillLocked.why), 'but a gun they have NOT earned is still refused');
