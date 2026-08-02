@@ -5,6 +5,12 @@ friends. Guns, steel, bots, and two nervous guards on the rampart.
 
 **Play now → <https://buildwithsumit.com/ivaangames/>**
 
+### 👉 New here? Read the [**Player's Guide**](GUIDE.md)
+
+Everything below is the full reference — every stat, formula and rule. The guide
+is the friendly version, written for someone picking the game up for the first
+time.
+
 Also runs with no server at all: download [iron-line.html](iron-line.html) and
 open it. The whole single-player game is in that one file.
 
