@@ -5,7 +5,7 @@
 import { Sim } from './sim/sim.js';
 import { applyIntent, makeRateLimiter, rateOk } from './sim/intents.js';
 import { encodeSnapshot, staticInfo } from './sim/snapshot.js';
-import { kitName, MODES, PCOL, TOWERS } from './sim/constants.js';
+import { kitName, MODES, PCOL, TOWERS, diffOf, DIFFICULTY } from './sim/constants.js';
 import { track } from './analytics.js';
 
 export const TICK_HZ = 30;
@@ -20,7 +20,7 @@ const EMPTY_ROOM_TTL_MS = 120_000;
 let ROOM_SEQ = 0;
 
 export class Room {
-  constructor({ code, name, isPublic, hostToken, map, partySize, allUnlocked, rnd }) {
+  constructor({ code, name, isPublic, hostToken, map, partySize, allUnlocked, difficulty, rnd }) {
     this.id = ++ROOM_SEQ;
     this.code = code;
     this.name = (name || 'Iron Line').slice(0, 40);
@@ -30,6 +30,7 @@ export class Room {
     this.partySize = Math.max(1, Math.min(4, partySize | 0 || 2));
     // Quests apply by default; the host can waive them for a casual game.
     this.allUnlocked = allUnlocked === true;
+    this.difficulty = DIFFICULTY[difficulty] ? difficulty : 'regular';
     this.rnd = rnd;
 
     this.state = 'lobby';                 // 'lobby' | 'playing' | 'ended'
@@ -150,6 +151,7 @@ export class Room {
       players: this.partySize,
       map: this.map,
       unlocked: this.allUnlocked ? null : new Set(),
+      difficulty: this.difficulty,
     });
     // Seed each seat's earned weapons from what its client reported on join.
     for (const [seat, s] of this.seats) this.sim.setSeatUnlocks(seat, s.unlocked);
@@ -297,6 +299,7 @@ export class Room {
       room: {
         code: this.code, name: this.name, isPublic: this.isPublic,
         partySize: this.partySize, map: this.map, allUnlocked: this.allUnlocked,
+        difficulty: this.difficulty, difficultyName: diffOf(this.difficulty).name,
         mode: MODES[this.partySize], state: this.state,
       },
       roster: this.roster(),
@@ -308,6 +311,7 @@ export class Room {
   listing() {
     return {
       code: this.code, name: this.name, mode: MODES[this.partySize],
+      difficulty: diffOf(this.difficulty).name,
       partySize: this.partySize, players: this.occupied,
       open: this.openSeats.length, state: this.state,
       wave: this.sim ? this.sim.G.wave : 0,

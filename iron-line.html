@@ -366,6 +366,8 @@
           </div>
 
           <div class="mapsRow"><span class="mapsLbl">Map</span><span id="mapPick"></span></div>
+          <div class="mapsRow"><span class="mapsLbl">Level</span><span id="diffPick"></span></div>
+          <div class="sNote" id="diffNote" style="text-align:left;margin-top:4px"></div>
           <button id="bPlay" class="primary">▶  PLAY</button>
 
           <div id="invite">
@@ -407,6 +409,8 @@
                 <option value="4">Squad — 4 players</option>
               </select></div>
             <div class="fRow"><label>Map</label><select id="roomMap"></select></div>
+            <div class="fRow"><label>Difficulty</label><select id="roomDiff"></select></div>
+            <div class="sNote" id="roomDiffNote" style="margin:-4px 0 2px 90px"></div>
             <label class="chk"><input type="checkbox" id="roomPublic"> List it publicly so anyone can join</label>
             <label class="chk"><input type="checkbox" id="roomUnlock"> Skip the quests — give everyone every weapon</label>
             <button id="bCreate" class="primary" style="font-size:15px;padding:10px">Create game</button>
@@ -707,6 +711,22 @@ const ENEMIES={
 };
 
 // ───────────────────────────── 100-wave curve
+const DIFFICULTY={
+  recruit:{name:'Recruit',hp:0.85,count:0.92,income:1.15,lives:25,desc:'Forgiving. Learn the maps.'},
+  regular:{name:'Regular',hp:1.00,count:1.00,income:1.00,lives:20,desc:'The intended fight.'},
+  veteran:{name:'Veteran',hp:1.15,count:1.08,income:0.92,lives:16,desc:'Tighter economy, real pressure.'},
+  iron:   {name:'Iron',   hp:1.32,count:1.16,income:0.84,lives:12,desc:'Every mistake costs the run.'},
+};
+const DKEYS=Object.keys(DIFFICULTY);
+const diffOf=k=>DIFFICULTY[k]||DIFFICULTY.regular;
+const DIFFKEY='ironline.difficulty';
+let DIFF='regular';
+try{ const d=localStorage.getItem(DIFFKEY); if(DIFFICULTY[d]) DIFF=d; }catch(_){}
+// Co-op scaling and the softened first bosses, matching the server exactly.
+const PARTY_COEFF=0.8;
+const partyScale=p=>1+PARTY_COEFF*(Math.max(1,p)-1);
+const bossRamp=n=>(n>=12?1:0.45+0.55*Math.max(0,n-5)/7);
+
 const MAXWAVE=50;
 // How long THIS run is. Offline it is always 50; online the server decides
 // (50 solo, 100 with a party) and tells us in the start payload.
@@ -716,16 +736,18 @@ const bossHp  = n => 800 * hpScale(n) * 1.5;
 const goldScale = n => 1 + .04*(n-1);
 const armorOf = (base,n) => base + Math.floor(n/6);
 
-function waveDef(n){
-  const cap=(x,m)=>Math.max(1,Math.min(m,Math.round(x)));
+function waveDef(n,players,diffKey){
+  const P=players||(G?G.players:1)||1, D=diffOf(diffKey||DIFF);
+  const mul=partyScale(P)*D.count, gm=Math.sqrt(mul);
+  const cap=(x,m)=>Math.max(1,Math.min(Math.round(m*mul),Math.round(x*mul)));
   const m=n*2;                                  // curve compressed into half the waves
-  const w=[{t:'grunt', c:cap(6+m*1.15,34), g:Math.max(.22,.85-m*.012)}];
-  if(n>=2) w.push({t:'runner', c:cap(3+m*.7,26), g:Math.max(.18,.45-m*.004)});
-  if(n>=3) w.push({t:'flyer',  c:cap(2+m*.5,22), g:Math.max(.24,.6-m*.005)});
-  if(n>=4) w.push({t:'tank',   c:cap(1+m/3.2,16), g:Math.max(.38,1.05-m*.007)});
+  const w=[{t:'grunt', c:cap(6+m*1.15,34), g:Math.max(.22,.85-m*.012)/gm}];
+  if(n>=2) w.push({t:'runner', c:cap(3+m*.7,26), g:Math.max(.18,.45-m*.004)/gm});
+  if(n>=3) w.push({t:'flyer',  c:cap(2+m*.5,22), g:Math.max(.24,.6-m*.005)/gm});
+  if(n>=4) w.push({t:'tank',   c:cap(1+m/3.2,16), g:Math.max(.38,1.05-m*.007)/gm});
   // a boss every wave from 5, plus one more every ten waves
-  if(n>=5) w.push({t:'boss', c:1+Math.floor((n-5)/10), g:2.2});
-  if(n===WAVECAP-1) w.push({t:'ultra', c:3, g:6});      // three Ultra Bosses
+  if(n>=5) w.push({t:'boss', c:Math.max(1,Math.round((1+Math.floor((n-5)/10))*(1+0.4*(P-1)))), g:2.2});
+  if(n===WAVECAP-1) w.push({t:'ultra', c:Math.max(3,Math.round(3*partyScale(P))), g:6});   // Ultra Bosses
   return w;
 }
 
@@ -775,7 +797,7 @@ const maxSquads=()=>(G&&G.admin&&G.admin.squadBonus===Infinity) ? Infinity
 
 function newGame(){
   if(AUTOMAP) loadMap(rollMap());     // new run, new battlefield
-  G={ lives:20, gold:250, wave:0, towers:[], bots:[], enemies:[], bullets:[], parts:[],
+  G={ lives:diffOf(DIFF).lives, gold:250, wave:0, towers:[], bots:[], enemies:[], bullets:[], parts:[],
       texts:[], zaps:[], swings:[], spawnQ:[], spawnT:0, spawning:false, prep:15,
       waveActive:false, over:false, won:false, sel:null, place:null, paused:false,
       speed:1, slowmo:false, shake:0, t:0, healBuys:{bandage:0,medkit:0}, leaked:0, killed:0,
@@ -826,7 +848,7 @@ function startWave(early){
   if(early&&G.prep>0){ const b=Math.round(G.prep*3); G.gold+=b; pop(W/2,60,'+'+b+' early bonus','#f2c14e'); }
   G.wave++; G.waveActive=true; G.spawning=true; G.prep=0;
   const q=[];
-  for(const grp of waveDef(G.wave)){ let t=0;
+  for(const grp of waveDef(G.wave,G.players,DIFF)){ let t=0;
     for(let i=0;i<grp.c;i++){ q.push({type:grp.t,at:t}); t+=grp.g; } }
   q.sort((a,b)=>a.at-b.at);
   G.spawnQ=q; G.spawnT=0; syncUI();
@@ -840,8 +862,8 @@ function spawn(type){
   }
   const b=ENEMIES[type];
   const hp=(type==='ultra'? bossHp(G.wave)*4.5
-           : type==='boss' ? bossHp(G.wave)
-           : b.hp*hpScale(G.wave))*(G.admin.hpMul||1);
+           : type==='boss' ? bossHp(G.wave)*bossRamp(G.wave)
+           : b.hp*hpScale(G.wave))*(G.admin.hpMul||1)*diffOf(DIFF).hp;
   const p=b.fly?AIRPATH:PATH;
   G.enemies.push({type,x:p[0].x,y:p[0].y,wp:1,hp,maxhp:hp,
     speed:b.speed*(type==='boss'?1:(.94+Math.random()*.12)),
@@ -860,7 +882,7 @@ function kill(e,src){
   G.enemies.splice(i,1); G.killed++;
   // randomised bounty: ±35% swing, with an occasional jackpot drop
   const jack=Math.random()<.08;
-  const drop=Math.max(1,Math.round(e.gold*(.65+Math.random()*.7)*(jack?3:1)));
+  const drop=Math.max(1,Math.round(e.gold*(.65+Math.random()*.7)*(jack?3:1)*diffOf(DIFF).income));
   G.gold+=drop;
   pop(e.x,e.y-e.r-4,(jack?'JACKPOT +':'+')+drop, jack?'#ffe066':'#f2c14e');
   if(jack) burst(e.x,e.y,'#ffe066',18,150);
@@ -3449,7 +3471,7 @@ function syncUI(){
 
   const nx=G.wave+1;
   $('nextInfo').innerHTML = nx>WAVECAP ? 'All waves cleared.' :
-    waveDef(nx).map(g=>`<div>${g.c}× ${ENEMIES[g.t].name}${ENEMIES[g.t].fly?' <span style="color:#d18bff">(air)</span>':''}</div>`).join('')
+    waveDef(nx,G.players,DIFF).map(g=>`<div>${g.c}× ${ENEMIES[g.t].name}${ENEMIES[g.t].fly?' <span style="color:#d18bff">(air)</span>':''}</div>`).join('')
     +`<div style="margin-top:4px;color:#5f6b77">hp ×${hpScale(nx).toFixed(1)} · armour +${Math.floor(nx/6)}</div>`;
 }
 function showMsg(on,t,p){
@@ -3733,6 +3755,42 @@ $('bFP').onclick=()=>{ FP.on?exitFP():enterFP(); };
 $('aClose').onclick=()=>toggleAdmin(false);
 
 // ───────────────────────────── lobby
+// ───────────────────────────── difficulty pickers
+function setDifficulty(k){
+  if(!DIFFICULTY[k]) return;
+  DIFF=k;
+  try{ localStorage.setItem(DIFFKEY,k); }catch(_){}
+  paintDiff();
+  if(NET.active&&NET.isHost) netSend({type:'setopts',difficulty:k});
+}
+function paintDiff(){
+  // couch lobby: a row of buttons
+  const box=$('diffPick');
+  if(box){
+    box.innerHTML='';
+    for(const k of DKEYS){
+      const b=document.createElement('button');
+      b.className='mapBtn'+(k===DIFF?' on':'');
+      b.textContent=DIFFICULTY[k].name;
+      b.onclick=()=>setDifficulty(k);
+      box.appendChild(b);
+    }
+    $('diffNote').textContent=diffOf(DIFF).desc+'  ·  starts with '+diffOf(DIFF).lives+' lives';
+  }
+  // online lobby: a select, host-only
+  const sel=$on('roomDiff');
+  if(sel){
+    if(!sel.options.length)
+      sel.innerHTML=DKEYS.map(k=>`<option value="${k}">${DIFFICULTY[k].name}</option>`).join('');
+    const shown=(NET.room&&NET.room.difficulty)||DIFF;
+    sel.value=shown;
+    const d=diffOf(shown);
+    $on('roomDiffNote').textContent=d.desc+' · '+d.lives+' lives'
+      +(d.hp!==1?' · enemies ×'+d.hp+' health':'')
+      +(d.income!==1?' · gold ×'+d.income:'');
+  }
+}
+
 let AUTOSKIP=false;
 function paintAuto(){
   $('bAuto').classList.toggle('on',AUTOSKIP);
@@ -4067,6 +4125,8 @@ function netStart(info){
   toggleAdmin(false);                              // no cheat panel in a shared game
   FP.advance=false; FP.keys={};                    // online is pure tower defence
   WAVECAP=(info.consts&&info.consts.MAXWAVE)||MAXWAVE;
+  if(info.difficulty&&DIFFICULTY[info.difficulty.key]) DIFF=info.difficulty.key;
+  paintDiff();
   newGame();
   G.players=PLAYERS; G.chests=[];                  // chests are a first-person thing
   G.cur={1:{c:5,r:8,key:null},2:{c:8,r:8,key:null},3:{c:11,r:8,key:null},4:{c:16,r:8,key:null}};
@@ -4370,8 +4430,9 @@ function paintRoom(m){
   $on('roomMap').value=NET.room.map;
   $on('roomPublic').checked=NET.room.isPublic;
   $on('roomUnlock').checked=NET.room.allUnlocked;
-  for(const el of ['roomSize','roomMap','roomPublic','roomUnlock','roomName'])
+  for(const el of ['roomSize','roomMap','roomPublic','roomUnlock','roomName','roomDiff'])
     $on(el).disabled=!NET.isHost||NET.room.state!=='lobby';
+  paintDiff();
   if(m.chat) { NET.chat=m.chat; paintChat(); }
   paintMpBar();
   paintNetStatus();
@@ -4443,6 +4504,7 @@ $on('bCreate').onclick=()=>{
     isPublic:$on('roomPublic').checked,
     partySize:+$on('roomSize').value,
     map:$on('roomMap').value,
+    difficulty:$on('roomDiff').value,
     allUnlocked:$on('roomUnlock').checked});
 };
 $on('bJoin').onclick=()=>{
@@ -4463,13 +4525,14 @@ $on('bCopyLink').onclick=async()=>{
   $on('bCopyLink').textContent='Copied!';
   setTimeout(()=>{ $on('bCopyLink').textContent='Copy invite link'; },1800);
 };
+$on('roomDiff').addEventListener('change',()=>{ if(NET.isHost) setDifficulty($on('roomDiff').value); });
 for(const el of ['roomSize','roomMap','roomPublic','roomUnlock','roomName']){
   $on(el).addEventListener('change',()=>{
     if(!NET.isHost) return;
     netSend({type:'setopts',
       partySize:+$on('roomSize').value, map:$on('roomMap').value,
       isPublic:$on('roomPublic').checked, allUnlocked:$on('roomUnlock').checked,
-      name:$on('roomName').value});
+      difficulty:$on('roomDiff').value, name:$on('roomName').value});
   });
 }
 const sendChat=inp=>{
@@ -4520,6 +4583,7 @@ newGame();
 paintModes();                        // lobby is pre-built but hidden — straight into play
 paintAuto();
 paintQuests();
+paintDiff();
 requestAnimationFrame(frame);
 setInterval(()=>{
   $('sTimer').textContent=(!G.waveActive&&!G.over&&G.wave<WAVECAP)?'next in '+G.prep.toFixed(0)+'s':'';

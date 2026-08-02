@@ -131,6 +131,54 @@ export const bossHp = n => 800 * hpScale(n) * 1.5;
 export const goldScale = n => 1 + .04 * (n - 1);
 export const armorOf = (base, n) => base + Math.floor(n / 6);
 
+// ── difficulty ────────────────────────────────────────────────────────────
+// Four explicit tiers the host picks, plus the party-size scaling that keeps
+// co-op honest. Measured headroom (firepower ÷ incoming health) on Regular sits
+// near 1.5-2× for a competent player; Iron pulls that under 1.
+// Tuned by measurement, not feel. A reference bot reaches roughly wave 20 / 11 /
+// 7 / 5 across these four; a competent human gets considerably further. The
+// first attempt spaced them far too wide — Veteran and Iron both ended runs by
+// wave 3, which is not a difficulty setting, it is a wall.
+export const DIFFICULTY = {
+  recruit: { name:'Recruit', hp:0.85, count:0.92, income:1.15, lives:25,
+             desc:'Forgiving. Learn the maps.' },
+  regular: { name:'Regular', hp:1.00, count:1.00, income:1.00, lives:20,
+             desc:'The intended fight.' },
+  veteran: { name:'Veteran', hp:1.15, count:1.08, income:0.92, lives:16,
+             desc:'Tighter economy, real pressure.' },
+  iron:    { name:'Iron',    hp:1.32, count:1.16, income:0.84, lives:12,
+             desc:'Every mistake costs the run.' },
+};
+export const DKEYS = Object.keys(DIFFICULTY);
+export const diffOf = k => DIFFICULTY[k] || DIFFICULTY.regular;
+
+/**
+ * How much bigger a wave gets per extra player.
+ *
+ * Co-op used to be free: four players brought four separate economies to one
+ * unchanged wave, so a party had ~4× the income against ~1× the threat
+ * (measured headroom at wave 1 was 3.8× solo versus 18.5× for four).
+ *
+ * The scaling goes on enemy COUNT rather than health, deliberately. Bounties
+ * are paid per kill, so more enemies means proportionally more gold — each
+ * player ends up earning and facing roughly one solo game's worth. Scaling
+ * health instead would multiply the threat while leaving total income flat,
+ * which starves the party rather than challenging it.
+ */
+// Tunable so the balance sweep can search it without editing source. In the
+// browser, and in production, it is simply the constant below.
+export const PARTY_COEFF =
+  (typeof process !== 'undefined' && process.env && +process.env.IRONLINE_PARTY_COEFF) || 0.8;
+export const partyScale = players => 1 + PARTY_COEFF * (Math.max(1, players) - 1);
+
+/**
+ * Bosses arrive from wave 5, but a wave-5 boss at full strength is the wall
+ * every measured solo run died on. This ramps the first few from 45% up to
+ * full by wave 12 — the boss still shows up on schedule, it just is not an
+ * instant loss before you have an economy.
+ */
+export const bossRamp = n => (n >= 12 ? 1 : 0.45 + 0.55 * Math.max(0, n - 5) / 7);
+
 /**
  * The composition of wave `n` in a run that ends at `maxWave`.
  *
@@ -139,13 +187,24 @@ export const armorOf = (base, n) => base + Math.floor(n / 6);
  * A 100-wave run keeps it, so the back half is genuinely punishing rather than
  * a stretched-out version of the front half.
  */
-export function waveDef(n, maxWave = MAXWAVE) {
-  const cap = (x, m) => Math.max(1, Math.min(m, Math.round(x)));
+export function waveDef(n, maxWave = MAXWAVE, players = 1, diffKey = 'regular') {
+  const D = diffOf(diffKey);
+  // Party scaling and the difficulty tier both act on headcount, and both also
+  // lift the per-group ceilings — otherwise a 4-player Iron wave would cap out
+  // at exactly the same 34 grunts a solo Recruit wave does.
+  const mul = partyScale(players) * D.count;
+  const cap = (x, m) => Math.max(1, Math.min(Math.round(m * mul), Math.round(x * mul)));
+  // Spawn gaps tighten by only the SQUARE ROOT of the multiplier. Dividing them
+  // by the full multiplier keeps the wave the same length while tripling its
+  // size, which lands the whole thing as one unkillable blob — measured, that
+  // killed every party run by wave 6. This way a bigger wave is partly more
+  // enemies and partly a longer wave, and instantaneous pressure stays sane.
+  const gm = Math.sqrt(mul);
   const m = n * 2;
-  const w = [{ t:'grunt', c:cap(6 + m * 1.15, 34), g:Math.max(.22, .85 - m * .012) }];
-  if (n >= 2) w.push({ t:'runner', c:cap(3 + m * .7, 26), g:Math.max(.18, .45 - m * .004) });
-  if (n >= 3) w.push({ t:'flyer',  c:cap(2 + m * .5, 22), g:Math.max(.24, .6 - m * .005) });
-  if (n >= 4) w.push({ t:'tank',   c:cap(1 + m / 3.2, 16), g:Math.max(.38, 1.05 - m * .007) });
+  const w = [{ t:'grunt', c:cap(6 + m * 1.15, 34), g:Math.max(.22, .85 - m * .012) / gm }];
+  if (n >= 2) w.push({ t:'runner', c:cap(3 + m * .7, 26), g:Math.max(.18, .45 - m * .004) / gm });
+  if (n >= 3) w.push({ t:'flyer',  c:cap(2 + m * .5, 22), g:Math.max(.24, .6 - m * .005) / gm });
+  if (n >= 4) w.push({ t:'tank',   c:cap(1 + m / 3.2, 16), g:Math.max(.38, 1.05 - m * .007) / gm });
   // From wave 5 on, every wave brings a boss, and one more every ten waves:
   // 1 from wave 5, 2 from 15, 3 from 25 … 10 at wave 100.
   //
@@ -154,9 +213,14 @@ export function waveDef(n, maxWave = MAXWAVE) {
   // got one), so the run briefly got easier as it went. It also must not key
   // off multiples of five, which would double wave 5 — already the wave most
   // runs die on, and the game's first real test.
-  if (n >= 5) w.push({ t:'boss', c:1 + Math.floor((n - 5) / 10), g:2.2 });
+  // Bosses scale with the party too, but on a gentler curve — four players
+  // facing four times the bosses turns every wave into a boss rush.
+  if (n >= 5) {
+    const base = 1 + Math.floor((n - 5) / 10);
+    w.push({ t:'boss', c:Math.max(1, Math.round(base * (1 + 0.4 * (Math.max(1, players) - 1)))), g:2.2 });
+  }
   // the three Ultra Bosses land on the penultimate wave, whatever the length
-  if (n === maxWave - 1) w.push({ t:'ultra', c:3, g:6 });
+  if (n === maxWave - 1) w.push({ t:'ultra', c:Math.max(3, Math.round(3 * partyScale(players))), g:6 });
   return w;
 }
 

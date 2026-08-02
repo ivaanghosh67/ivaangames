@@ -18,7 +18,7 @@ open it. The whole single-player game is in that one file.
 
 - [Features](#features) · [How to play](#how-to-play) · [Controls](#controls)
 - [The board](#the-board) · [Lives](#lives) · [Gold](#gold)
-- [Waves](#waves) · [Enemies](#enemies)
+- [Difficulty](#difficulty) · [Waves](#waves) · [Enemies](#enemies)
 - [Towers](#towers) · [Bots](#bots) · [Medical](#medical)
 - [Upgrading and selling](#upgrading-and-selling)
 - [How to get better](#how-to-get-better) · [What unlocks when](#what-unlocks-when)
@@ -35,6 +35,8 @@ open it. The whole single-player game is in that one file.
   robots you can order around the field
 - **10 upgrade levels** per unit, compounding to roughly **33× the damage**
 - **50-wave solo campaign**, or **100 waves** when you play with someone
+- **Four difficulty tiers**, and waves that scale with your party size so co-op
+  is a bigger fight rather than an easier one
 - **A boss every wave from wave 5**, building to **10 bosses at once** — and three
   **Ultra Bosses** on the penultimate wave
 - **Online co-op for 2–4 players** on separate computers, with a **shareable
@@ -167,6 +169,53 @@ Two bonuses pay **every player in full** rather than being split:
 
 That last one is the most reliable income in the game. If your line is holding
 comfortably, calling waves in early compounds fast.
+
+---
+
+## Difficulty
+
+The host picks a tier when creating a game; solo players pick it in the lobby.
+
+| Tier | Lives | Enemy health | Enemy count | Gold | For |
+|---|---:|---:|---:|---:|---|
+| **Recruit** | 25 | ×0.85 | ×0.92 | ×1.15 | Learning the maps |
+| **Regular** | 20 | ×1.00 | ×1.00 | ×1.00 | The intended fight |
+| **Veteran** | 16 | ×1.15 | ×1.08 | ×0.92 | Tighter economy, real pressure |
+| **Iron** | 12 | ×1.32 | ×1.16 | ×0.84 | Every mistake costs the run |
+
+### Co-op scales with the party
+
+**More players means a bigger wave.** Each extra player adds **80% more
+enemies** — a duo faces 1.8× a solo wave, a four-player squad 3.4×.
+
+This is deliberate and it is the single most important balance rule in the game.
+Every player has their own purse, so a four-player party has four economies. If
+the wave did not grow with them, four players would bring four times the
+firepower to an unchanged fight. Measured before this rule existed, a solo
+player had 3.8× spare firepower on wave 1 and a four-player party had **18.5×** —
+co-op was not co-operation, it was a cheat code.
+
+Because bounties are paid per kill, more enemies also means proportionally more
+gold. Each player ends up earning and facing roughly one solo game's worth.
+
+Two details that keep it fair:
+
+- **Wave length grows too.** Spawn gaps tighten by only the square root of the
+  multiplier, so a bigger wave is partly more enemies and partly a longer wave.
+  Scaling both together landed the whole wave as one unkillable blob.
+- **Shared bonuses are shared.** Wave-clear and early-call bonuses pay each
+  player a share matching the threat they carry, rather than paying everyone the
+  full amount four times over.
+
+Bosses scale more gently — 40% more per extra player rather than 80% — because
+four times the bosses turns every wave into a boss rush.
+
+### The first bosses are softened
+
+A boss arrives every wave from wave 5, but the first ones come in at **45%
+health**, ramping to full by wave 12. Wave 5 was the wall that ended almost
+every measured solo run; the boss still shows up on schedule, it just is not an
+instant loss before you have an economy.
 
 ---
 

@@ -18,10 +18,13 @@ import { applyIntent } from '../sim/intents.js';
 import {
   TOWERS, BOTS, TKEYS, BKEYS, COLS, ROWS, MAXLVL,
   waveDef, hpScale, bossHp, armorOf, statsOf, botStats, ENEMIES, kitOf,
+  diffOf, bossRamp, DKEYS,
 } from '../sim/constants.js';
 
 const PARTIES = (process.argv[2] || '1,2,4').split(',').map(Number);
 const MAXW = +(process.argv[3] || 40);
+const DIFF = process.argv[4] || 'regular';
+const TRACE = +(process.argv[5] || 0);   // party size to trace wave by wave
 const DT = 1 / 30;
 
 function rngFor(seed) {
@@ -30,13 +33,14 @@ function rngFor(seed) {
 }
 
 /** Effective health of one wave, counting armour as damage soaked per hit. */
-function waveThreat(n, maxWave) {
+function waveThreat(n, maxWave, players, diffKey) {
+  const D = diffOf(diffKey);
   let hp = 0, count = 0;
-  for (const g of waveDef(n, maxWave)) {
+  for (const g of waveDef(n, maxWave, players, diffKey)) {
     const base = ENEMIES[g.t];
-    const each = g.t === 'ultra' ? bossHp(n) * 4.5
-               : g.t === 'boss' ? bossHp(n)
-               : base.hp * hpScale(n);
+    const each = (g.t === 'ultra' ? bossHp(n) * 4.5
+               : g.t === 'boss' ? bossHp(n) * bossRamp(n)
+               : base.hp * hpScale(n)) * D.hp;
     hp += each * g.c;
     count += g.c;
   }
@@ -127,12 +131,12 @@ function makeGoodPlayer(sim, seat, partySize, rnd) {
   };
 }
 
-console.log('POWER/THREAT headroom — how much spare firepower the defence has.');
+console.log(`POWER/THREAT headroom  —  difficulty: ${diffOf(DIFF).name}`);
 console.log('  ~1.0 a real fight · 2.0 comfortable · 3.0+ the wave is a formality\n');
 
 const rows = {};
 for (const party of PARTIES) {
-  const sim = new Sim({ seed: 4242, players: party, map: 'Iron Line' });
+  const sim = new Sim({ seed: 4242, players: party, map: 'Iron Line', difficulty: DIFF });
   const rnd = rngFor(99);
   const acts = [];
   for (let s = 1; s <= party; s++) acts.push(makeGoodPlayer(sim, s, party, rnd));
@@ -144,10 +148,20 @@ for (const party of PARTIES) {
     if (ticks % 6 === 0) for (const a of acts) a();
     if (sim.G.wave !== lastWave && sim.G.wave > 0) {
       lastWave = sim.G.wave;
-      const th = waveThreat(sim.G.wave, sim.maxWave);
+      const th = waveThreat(sim.G.wave, sim.maxWave, party, DIFF);
       const pw = defencePower(sim);
       // a wave lasts roughly its spawn spread; 25 s is a fair working figure
       const applied = pw.dps * 25;
+      if (TRACE && party === TRACE) {
+        const wd = waveDef(sim.G.wave, sim.maxWave, party, DIFF);
+        const n = wd.reduce((a, g) => a + g.c, 0);
+        const span = Math.max(...wd.map(g => g.c * g.g));
+        console.log(`   w${String(sim.G.wave).padStart(2)}  ${String(n).padStart(4)} enemies` +
+          ` over ${span.toFixed(0).padStart(3)}s   lives ${String(sim.G.lives).padStart(3)}` +
+          `   leaked ${String(sim.G.leaked).padStart(3)}   gold ${String(Math.round(Object.values(sim.G.purse).slice(0,party).reduce((a,b)=>a+b,0))).padStart(5)}` +
+          `   towers ${String(sim.G.towers.length).padStart(3)}` +
+          `   avgLvl ${(sim.G.towers.reduce((a,t)=>a+t.lvl,0)/Math.max(1,sim.G.towers.length)).toFixed(1)}`);
+      }
       series.push({
         w: sim.G.wave,
         ratio: applied / th.hp,

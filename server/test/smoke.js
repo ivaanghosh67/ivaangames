@@ -87,12 +87,15 @@ async function main() {
   const hw = await host.wait('welcome');
   ok(!!hw.token, 'host gets a token');
   ok(Array.isArray(hw.maps) && hw.maps.length > 0, 'server advertises maps');
+  ok(Array.isArray(hw.difficulties) && hw.difficulties.length === 4,
+    `server advertises the four difficulty tiers (${(hw.difficulties||[]).map(d=>d.name).join('/')})`);
 
   guest.send({ type: 'hello', name: 'Guesty' });
   await guest.wait('welcome');
 
   // ── create a public duo room ──
-  host.send({ type: 'create', name: 'Smoke Test', isPublic: true, partySize: 2, map: 'Iron Line' });
+  host.send({ type: 'create', name: 'Smoke Test', isPublic: true, partySize: 2,
+              map: 'Iron Line', difficulty: 'veteran' });
   const created = await host.wait('joined');
   ok(created.seat === 1, 'host takes seat 1');
   ok(created.isHost === true, 'host is flagged as host');
@@ -122,13 +125,15 @@ async function main() {
   ok(started.info.players === 2, 'run starts as a duo');
   ok(started.info.map.name === 'Iron Line', 'requested map was honoured');
   ok(started.info.defs.TKEYS.length > 0, 'definition tables shipped to the client');
+  ok(started.info.difficulty && started.info.difficulty.key === 'veteran',
+    `the chosen difficulty reached the run (${started.info.difficulty && started.info.difficulty.name})`);
   await guest.wait('start');
 
   // ── snapshots flow ──
   const s1 = await host.wait('s');
   ok(s1.s.gp[0] === 250 && s1.s.gp[1] === 250,
     `each seat starts with its own 250 gold (got ${s1.s.gp.slice(0, 2)})`);
-  ok(s1.s.l === 20, 'starting lives is 20');
+  ok(s1.s.l === 16, `Veteran starts with 16 lives, not 20 (got ${s1.s.l})`);
 
   // ── shared arsenal: every seat can build anything ──
   // (a sniper at 130g, not a railgun — you only start with 250)

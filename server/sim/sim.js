@@ -20,6 +20,7 @@ import {
   clamp, dist, TOWERS, BOTS, HEALS, ENEMIES, TKEYS, BKEYS,
   hpScale, bossHp, goldScale, armorOf, waveDef, statsOf, botStats,
   kitOf, canUse, upCostOf, healCostOf, PCOL,
+  diffOf, partyScale, bossRamp,
 } from './constants.js';
 import { makeRng } from './rng.js';
 import { loadMap, pickMap } from './map.js';
@@ -28,10 +29,13 @@ const isBotUnit = u => !!(u && u.kind);
 const defOf = u => (isBotUnit(u) ? BOTS[u.kind] : TOWERS[u.type]);
 
 export class Sim {
-  constructor({ seed, players, map = 'random', unlocked = null }) {
+  constructor({ seed, players, map = 'random', unlocked = null, difficulty = 'regular' }) {
     this.rnd = makeRng(seed);
     this.seed = seed >>> 0;
     this.players = clamp(players | 0, 1, 4);
+    this.diffKey = diffOf(difficulty) === diffOf('regular') && difficulty !== 'regular'
+      ? 'regular' : difficulty;
+    this.diff = diffOf(this.diffKey);
     // 50 waves solo, 100 with company.
     this.maxWave = maxWaveFor(this.players);
     // null waives the quest locks for the whole room (a host option). Otherwise
@@ -94,7 +98,7 @@ export class Sim {
   newGame() {
     const K = this.map.keep;
     this.G = {
-      lives:20,
+      lives:this.diff.lives,
       // Gold is PER PLAYER: you spend what your own kills earned. Lives stay
       // shared, because the line is shared — you hold it together or you don't.
       // Each purse starts at the solo game's 250 so one player's economy feels
@@ -135,6 +139,19 @@ export class Sim {
     if (seat && G.purse[seat] !== undefined) G.purse[seat] += n;
     else for (let s = 1; s <= this.players; s++) G.purse[s] += n;
   }
+
+  /**
+   * A shared bonus (clearing a wave, calling one in early), per player.
+   *
+   * Paying every player the full amount was the second half of the co-op
+   * income problem: four players collected four times the bonus against one
+   * wave. Now each player's share tracks the share of the threat they actually
+   * carry — a 4-player party faces partyScale(4) = 3.4× the enemies between
+   * four of them, so each takes 3.4/4 = 0.85 of a solo bonus.
+   */
+  sharedBonus(base) {
+    return Math.round(base * partyScale(this.players) / this.players * this.diff.income);
+  }
   goldOf(seat) { return Math.floor(this.G.purse[seat] || 0); }
 
   // ── waves ───────────────────────────────────────────────────────────────
@@ -142,14 +159,14 @@ export class Sim {
     const G = this.G;
     if (G.waveActive || G.over) return false;
     if (early && G.prep > 0) {
-      // Calling it in early is a shared decision, so everyone gets the bonus.
-      const b = Math.round(G.prep * 3);
+      // Calling it in early is a shared decision, so everyone gets a share.
+      const b = this.sharedBonus(G.prep * 3);
       this.credit(0, b);
       this.pop(W / 2, 60, '+' + b + ' early bonus', '#f2c14e');
     }
     G.wave++; G.waveActive = true; G.spawning = true; G.prep = 0;
     const q = [];
-    for (const grp of waveDef(G.wave, this.maxWave)) {
+    for (const grp of waveDef(G.wave, this.maxWave, this.players, this.diffKey)) {
       let t = 0;
       for (let i = 0; i < grp.c; i++) { q.push({ type:grp.t, at:t }); t += grp.g; }
     }
@@ -169,9 +186,11 @@ export class Sim {
       } else this.pop(W / 2, 178, 'another one', '#ff8ab0');
     }
     const b = ENEMIES[type];
+    // bossRamp softens only the first few bosses (waves 5-11), which is where
+    // every measured solo run was dying
     const hp = (type === 'ultra' ? bossHp(G.wave) * 4.5
-      : type === 'boss' ? bossHp(G.wave)
-      : b.hp * hpScale(G.wave)) * (G.admin.hpMul || 1);
+      : type === 'boss' ? bossHp(G.wave) * bossRamp(G.wave)
+      : b.hp * hpScale(G.wave)) * (G.admin.hpMul || 1) * this.diff.hp;
     const p = b.fly ? this.map.airpath : this.map.path;
     G.enemies.push({
       id:this.id(), type, x:p[0].x, y:p[0].y, wp:1, hp, maxhp:hp,
@@ -196,7 +215,7 @@ export class Sim {
     G.enemies.splice(i, 1); G.killed++;
     // randomised bounty: ±35% swing, with an occasional jackpot drop
     const jack = rnd() < .08;
-    const drop = Math.max(1, Math.round(e.gold * (.65 + rnd() * .7) * (jack ? 3 : 1)));
+    const drop = Math.max(1, Math.round(e.gold * (.65 + rnd() * .7) * (jack ? 3 : 1) * this.diff.income));
     // The bounty goes to whoever's gun did it. Kills by the free rampart guards
     // belong to nobody, so everyone gets paid for those.
     const earner = src && src.owner ? src.owner : 0;
@@ -422,9 +441,7 @@ export class Sim {
 
     if (G.waveActive && !G.spawning && !G.enemies.length) {
       G.waveActive = false;
-      // Clearing a wave pays every player the full bonus rather than a split
-      // of it, so a four-player economy stays paced like the solo game.
-      const bonus = Math.round((25 + 20 * G.wave) * (.8 + this.rnd() * .4));
+      const bonus = this.sharedBonus((25 + 20 * G.wave) * (.8 + this.rnd() * .4));
       this.credit(0, bonus);
       this.pop(W / 2, 92, 'Wave ' + G.wave + ' cleared  +' + bonus, '#6ee7a8');
       if (G.wave >= this.maxWave) {

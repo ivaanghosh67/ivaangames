@@ -14,7 +14,7 @@ import http from 'node:http';
 import { WebSocketServer } from 'ws';
 import { Room, TICK_HZ, send } from './room.js';
 import { makeRng, makeRoomCode } from './sim/rng.js';
-import { MAPS } from './sim/constants.js';
+import { MAPS, DIFFICULTY, DKEYS } from './sim/constants.js';
 import { staticInfo, encodeSnapshot } from './sim/snapshot.js';
 import analytics, { track } from './analytics.js';
 
@@ -136,7 +136,8 @@ function onMessage(ws, msg) {
         const s = ctx.room.seats.get(ctx.seat);
         if (s) { s.name = ctx.name; ctx.room.broadcast(ctx.room.lobbyState()); }
       }
-      return send(ws, { type: 'welcome', token: ctx.token, maps: MAPS.map(m => m.name) });
+      return send(ws, { type: 'welcome', token: ctx.token, maps: MAPS.map(m => m.name),
+        difficulties: DKEYS.map(k => ({ key: k, ...DIFFICULTY[k] })) });
     }
 
     case 'list':
@@ -159,6 +160,7 @@ function onMessage(ws, msg) {
         map: validMap(msg.map),
         partySize: msg.partySize,
         allUnlocked: msg.allUnlocked,
+        difficulty: msg.difficulty,
         rnd,
       });
       rooms.set(code, room);
@@ -196,6 +198,7 @@ function onMessage(ws, msg) {
       if (msg.map !== undefined) room.map = validMap(msg.map);
       if (msg.isPublic !== undefined) room.isPublic = !!msg.isPublic;
       if (msg.allUnlocked !== undefined) room.allUnlocked = !!msg.allUnlocked;
+      if (msg.difficulty !== undefined && DIFFICULTY[msg.difficulty]) room.difficulty = msg.difficulty;
       if (msg.name !== undefined) room.name = String(msg.name).slice(0, 40);
       return room.broadcast(room.lobbyState());
     }
