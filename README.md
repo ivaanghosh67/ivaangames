@@ -8,6 +8,10 @@ friends. Guns, steel, bots, and two nervous guards on the rampart.
 Also runs with no server at all: download [iron-line.html](iron-line.html) and
 open it. The whole single-player game is in that one file.
 
+![Iron Line gameplay](docs/media/gameplay.gif)
+
+*Wave 24. Five bosses on the board, towers at level 3–6, and the line holding.*
+
 ---
 
 ## Contents
@@ -43,6 +47,29 @@ open it. The whole single-player game is in that one file.
 - **Reconnect protection** — drop out and your seat and everything you built are
   held for 90 seconds
 - **Runs offline from a single HTML file.** No install, no build step, no account
+
+---
+
+## Screenshots
+
+### A wave in progress
+![A wave under way](docs/media/gameplay-wave.png)
+Towers show their level. The bar across the top tracks the bosses still alive.
+Green flashes are damage landing; the flag at the right is the keep you are
+defending.
+
+### A boss wave
+![Five bosses at once](docs/media/gameplay-boss.png)
+From wave 5 every wave carries a boss, and more of them as you go. Flyers (the
+purple arrowheads) cut straight across the map instead of following the road.
+
+### The online lobby
+![Online lobby](docs/media/online-lobby.png)
+Host a game, get a 5-letter code and a shareable link, or browse public games.
+
+### The settings menu
+![Settings menu](docs/media/settings.png)
+Display options, quest progress, and — offline only — the cheat panel.
 
 ---
 
@@ -415,6 +442,28 @@ room — there is one clock and one wave.
 **Not available online:** pause, fast-forward, the first-person view, and the
 admin/cheat panel. Time belongs to the server when it is shared. All four still
 work in offline solo play.
+
+---
+
+## Settings
+
+The gear button opens settings, in every mode.
+
+| Option | What it does |
+|---|---|
+| **Show every turret's range** | Draws all range circles at once — useful for spotting gaps |
+| **Enemy health bars** | Turn off for a cleaner board |
+| **Floating gold & damage text** | The `+13` numbers that pop off kills |
+| **Screen shake** | Turn off if it bothers you |
+| **Particle effects** | Turn off on a slow machine |
+| **Show FPS** | Frame rate, and your ping when online |
+| **Teammates' build cursors** | See what the others are lining up (online) |
+| **Chat box on screen** | Hide the chat panel (online) |
+| **Reset quest progress** | Clears counts and re-locks the four heavy weapons |
+
+Choices are saved on your computer. **Offline only:** the same menu opens the
+cheat panel, with free building, god mode, gold, wave jumping and map controls.
+It is unavailable online, where a shared game has to be the same for everyone.
 
 ---
 
