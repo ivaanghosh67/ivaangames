@@ -138,6 +138,55 @@ twice the last, so it is a way to spend a fortune, not a way around the limit.
 
 ---
 
+## Moving a gun you put in the wrong place
+
+Everybody puts guns in bad spots at first. Select the gun and click **Move**,
+then click where it should go. It costs a quarter of what that gun costs to
+buy — **10 gold for a pistol**, not a fortune — and the gun can't shoot for two
+seconds while it walks over.
+
+The fee is based on the *type* of gun, not on how much you've upgraded it. So
+moving your best gun costs exactly the same as moving a brand new one. That's
+deliberate: the better the gun, the more a bad spot is costing you.
+
+Press **`Y`** as a shortcut, or `Esc` to change your mind.
+
+---
+
+## Seeing where you're weak
+
+Press **`C`** and coloured dots appear along the road showing how well each bit
+is defended:
+
+| | |
+|---|---|
+| 🔴 **Red** | Nothing can shoot here at all |
+| 🟠 **Orange** | Barely covered |
+| 🟡 **Yellow** | Getting there |
+| 🟢 **Green** | Solidly covered |
+
+Red patches are where you'll lose the game. Look for them **before** the wave
+starts, not after.
+
+The colours are judged against the wave you're on, so a stretch that was green
+at wave 10 can turn orange by wave 30 without you touching anything — that's
+the enemies getting tougher, and it's a warning.
+
+---
+
+## When you lose, read what it says
+
+The end-of-run screen tells you **why**, not just that it happened. Things like:
+
+> *23 got past you — mostly flyers (23 of them)*
+> *Flyers cut straight across the map and your guns that can shoot up only reach 29% of that line. That is the hole.*
+> *2 of your units did almost nothing (Grenade Launcher) — 160g sat in guns that never fired at much.*
+
+It's blunt on purpose. Fix the one thing it complains about most and your next
+run will go further.
+
+---
+
 ## 🧠 Smart Upgrade
 
 Click **🧠 Smart Upgrade** in the top bar and the game spends your gold for you,

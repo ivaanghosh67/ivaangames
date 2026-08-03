@@ -25,6 +25,7 @@ import {
 import { makeRng } from './rng.js';
 import { loadMap, pickMap } from './map.js';
 import { bestUpgrade } from './smart.js';
+import { debrief } from './debrief.js';
 
 // How often Smart Upgrade may buy. See runSmart().
 const SMART_EVERY = 0.35;
@@ -125,6 +126,7 @@ export class Sim {
       spawnQ:[], spawnT:0, spawning:false, prep:15, waveActive:false,
       over:false, won:false, t:0, shake:0,
       healBuys:{ bandage:0, medkit:0 }, leaked:0, killed:0,
+      leakedBy:Object.create(null),      // what got past, by enemy type
       // Extra turret slots each seat has bought, at a compounding price.
       permits:{ 1:0, 2:0, 3:0, 4:0 },
       players:this.players, score:{ 1:0, 2:0, 3:0, 4:0 },
@@ -350,6 +352,10 @@ export class Sim {
     const i = G.enemies.indexOf(e);
     if (i < 0) return;
     G.enemies.splice(i, 1); G.leaked++;
+    // WHICH things got past is the whole story of a defeat. "Overrun on wave
+    // 27" tells a player nothing; "23 flyers got through" tells them exactly
+    // what to build next time.
+    G.leakedBy[e.type] = (G.leakedBy[e.type] || 0) + 1;
     const d = e.type === 'ultra' ? 25 : e.type === 'boss' ? 10 : 1;
     if (!G.admin.god) G.lives -= d;
     G.shake = Math.max(G.shake, 8); G.keep.hit = .7;
@@ -359,7 +365,10 @@ export class Sim {
       G.lives = 0; G.over = true;
       this.ev({ k:'over', won:false, title:'Overrun',
         body:'The line broke on wave ' + G.wave + ' of ' + this.maxWave + '.  ' + G.killed +
-             ' kills · ' + G.towers.length + ' emplacements · ' + G.bots.length + ' bots.' });
+             ' kills · ' + G.towers.length + ' emplacements · ' + G.bots.length + ' bots.',
+        // Per seat, because in co-op each player built a different half of the
+        // board and the useful advice is about their own half.
+        debrief:[1, 2, 3, 4].slice(0, this.players).map(s => debrief(this, s).lines) });
     }
   }
 
@@ -597,7 +606,8 @@ export class Sim {
         G.over = true; G.won = true;
         this.ev({ k:'over', won:true, title:'Line Held',
           body:'All ' + this.maxWave + ' waves repelled with ' + G.lives + ' lives left — ' +
-               G.killed + ' total kills.' });
+               G.killed + ' total kills.',
+          debrief:[1, 2, 3, 4].slice(0, this.players).map(s => debrief(this, s).lines) });
       } else G.prep = 15;
     }
   }

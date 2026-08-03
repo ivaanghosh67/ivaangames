@@ -9,6 +9,7 @@
 import {
   TS, COLS, ROWS, W, H, MAXLVL, MAXLIVES, clamp,
   TOWERS, BOTS, HEALS, TKEYS, BKEYS, canUse, PCOL, buildCostOf,
+  moveCostOf, MOVE_COOLDOWN,
 } from './constants.js';
 
 const isBotUnit = u => !!(u && u.kind);
@@ -104,6 +105,29 @@ export function applyIntent(sim, seat, msg) {
       G.bots.push(b);
       sim.burst(x, y, D.color, 14, 110);
       return { ok:true, changed:true, id:b.id };
+    }
+
+    case 'move': {
+      const u = sim.unitById(msg.id | 0);
+      if (!u || isBotUnit(u)) return { ok:false, why:'not a turret' };   // bots already walk
+      if (u.owner !== seat) return { ok:false, why:"that's Player " + u.owner + "'s unit" };
+      const c = msg.c | 0, r = msg.r | 0;
+      if (c === u.c && r === u.r) return { ok:true, changed:false };
+      if (!sim.canBuild(c, r)) return { ok:false, why:'blocked' };
+      const def = TOWERS[u.type];
+      const fee = moveCostOf(def);
+      if (!sim.spend(seat, fee)) return { ok:false, why:'need ' + fee + 'g to move it' };
+      const fx = u.x, fy = u.y;
+      u.c = c; u.r = r; u.x = c * TS + TS / 2; u.y = r * TS + TS / 2;
+      // Out of action while it redeploys, and its wind-up state is lost —
+      // a gatling that was up to speed has to spin back up.
+      u.cd = Math.max(u.cd, MOVE_COOLDOWN);
+      u.spin = 0; u.ramp = 0;
+      sim.ev({ k:'zap', x1:Math.round(fx), y1:Math.round(fy), x2:Math.round(u.x), y2:Math.round(u.y),
+        col:'#9fd8ff', w:2, life:.35 });
+      sim.burst(u.x, u.y, def.color, 12, 100);
+      sim.pop(u.x, u.y - 20, 'moved  -' + fee + 'g', '#9fd8ff');
+      return { ok:true, changed:true };
     }
 
     case 'permit': {

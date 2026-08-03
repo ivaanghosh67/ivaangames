@@ -392,6 +392,26 @@ export const towerCapOf = (wave, players = 1) =>
  * altogether and a seventh alone costs more than a whole run earns. A rich
  * player buys a handful of extra guns, not another fifty.
  */
+/**
+ * Picking a turret up and putting it somewhere better.
+ *
+ * Placement is the highest-leverage decision in the game and it was the only
+ * one with no undo. Measured with the Smart Upgrade optimiser: a good tile
+ * covers ~680 px of road and a poor one covers 0, a gap worth more than
+ * several upgrade levels — and the only remedy was selling at a 40% loss,
+ * which for a maxed turret means throwing away thousands of gold.
+ *
+ * The fee is a quarter of the turret's BASE price, deliberately NOT of what
+ * has been sunk into it. Charging a share of the investment would make moving
+ * your best turret the most expensive thing in the game, which is exactly
+ * backwards — the better the gun, the more a bad tile is costing you.
+ */
+export const MOVE_FEE = 0.25;
+export const moveCostOf = def => Math.max(5, Math.round(def.cost * MOVE_FEE));
+// A relocated turret is out of action briefly, so repositioning mid-wave to
+// chase a leak is a real decision rather than free micro.
+export const MOVE_COOLDOWN = 2.0;
+
 export const PERMIT_BASE = 3000;
 export const PERMIT_STEP = 2.1;
 export const permitCostOf = bought => Math.round(PERMIT_BASE * Math.pow(PERMIT_STEP, Math.max(0, bought)));

@@ -26,7 +26,8 @@ open it. The whole single-player game is in that one file.
 - [The board](#the-board) · [Lives](#lives) · [Gold](#gold)
 - [Difficulty](#difficulty) · [Waves](#waves) · [Enemies](#enemies)
 - [Towers](#towers) · [Bots](#bots) · [Medical](#medical)
-- [Upgrading and selling](#upgrading-and-selling) · [Smart Upgrade](#-smart-upgrade) · [The turret allowance](#the-turret-allowance)
+- [Upgrading and selling](#upgrading-and-selling) · [Relocating a turret](#relocating-a-turret) · [Coverage view](#coverage-view)
+- [The debrief](#the-end-of-run-debrief) · [Smart Upgrade](#-smart-upgrade) · [The turret allowance](#the-turret-allowance)
 - [How to get better](#how-to-get-better) · [What unlocks when](#what-unlocks-when)
 - [Quests](#quests-unlocking-the-heavy-weapons)
 - [Multiplayer rules](#multiplayer-rules)
@@ -58,6 +59,11 @@ open it. The whole single-player game is in that one file.
 - **🧠 Smart Upgrade** — an optimiser that spends your gold on whichever upgrade
   buys the most, weighing road covered, the next wave's air/ground mix, armour,
   and how much damage each of your units is *actually* dealing
+- **Relocate a turret** for a quarter of its base price, so the highest-leverage
+  decision in the game finally has an undo
+- **A coverage view** (`C`) that paints the road red where nothing can reach it
+- **An end-of-run debrief** that tells you *why* you lost — what leaked, where
+  the gap was, which gun did the work and which sat idle
 - **Plays on phones and tablets** — drag to aim, lift to place, with the board
   pinned above the shop
 - **Reconnect protection** — drop out and your seat and everything you built are
@@ -129,6 +135,8 @@ host clicks **Start the run**.
 | Chat (online) | `T` |
 | Pause / speed *(offline only)* | `Space` or `P` / the `1×` button |
 | Smart Upgrade on/off | the **🧠 Smart Upgrade** button |
+| Move the selected turret | `Y`, then click a tile |
+| Coverage view | `C` |
 
 Couch co-op gives players 2–4 their own keyboard cluster and their own on-screen
 cursor — the layouts are listed in the party lobby.
@@ -438,6 +446,73 @@ Everything can be upgraded to **level 10**.
 
 **Selling** returns **60% of everything you have put into a unit**, purchase
 price plus every upgrade. Recalling a bot works the same way.
+
+---
+
+## Relocating a turret
+
+Select a turret and press **`Y`** (or the **Move** button), then click a tile.
+
+The fee is **25% of the turret's base price** — 10g for a pistol, 85g for a
+railgun — and the turret is out of action for **2 seconds** while it redeploys,
+losing any spin-up or beam ramp it had built. Bots are refused: they already
+walk wherever you send them.
+
+The fee deliberately tracks the *turret type*, **not** what has been sunk into
+it. Charging a share of the investment would make moving your best turret the
+most expensive thing in the game, which is exactly backwards — the better the
+gun, the more a bad tile is costing you.
+
+> **Why this exists.** Placement is the highest-leverage decision in the game
+> and it was the only one with no undo. Measured with the Smart Upgrade
+> optimiser: a good tile covers ~680 px of road and a poor one covers **0** — a
+> gap worth more than several upgrade levels. The only previous remedy was
+> selling at a 40% loss, which on a maxed turret means throwing away thousands.
+
+---
+
+## Coverage view
+
+Press **`C`** to overlay the road with how much firepower actually reaches each
+point of it — red where nothing does, through amber and yellow, to green where
+it is solidly held.
+
+It is scaled against **what the current wave needs to be stopped**, not against
+the strongest point on your own board. Scaling to your own maximum would paint a
+uniformly under-gunned board a reassuring green; scaling to the threat means a
+stretch that was green at wave 10 can turn amber by wave 30 without you touching
+anything, which is exactly the warning you want.
+
+Uses the same coverage maths as Smart Upgrade, inverted: instead of asking how
+much road a turret sees, it asks how much firepower each piece of road has
+pointed at it.
+
+---
+
+## The end-of-run debrief
+
+Every run now ends with an explanation, not just a score. It is generated from
+data the game already had but never surfaced — what leaked and of which type,
+how much damage each unit dealt, and where each turret stands relative to both
+paths.
+
+It reports, in order of what matters:
+
+1. **What got through**, worst type first — and if flyers led, what percentage
+   of the *flight line* your anti-air actually reaches, since that is the most
+   common way a board that looks strong dies.
+2. **How much road had no gun covering it at all.**
+3. **Which unit did the work**, as a share of your total damage.
+4. **Which units did nothing** — under 2% of your damage despite costing 40g or
+   more — named, with the gold sitting idle in them.
+5. **Gold you never spent**, if you finished holding more than 800.
+
+In co-op it is **per seat**: you each built a different half of the board, so
+each player is told about their own half.
+
+It is deliberately blunt about the weakest link. "Your two launchers did 3% of
+your damage between them" is the sentence that changes what somebody builds next
+run; a balanced summary is not.
 
 ---
 

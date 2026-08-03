@@ -249,6 +249,12 @@
   #tutHi{position:absolute;border:2px solid #ffe066;border-radius:9px;pointer-events:none;
     z-index:7;display:none;box-shadow:0 0 0 9999px rgba(6,9,13,.55)}
   #tutHi.on{display:block}
+  #msgD{display:none;max-width:520px;text-align:left;background:rgba(20,29,38,.85);
+    border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:2px 0 4px}
+  #msgD .dbT{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--dim);font-weight:700;margin-bottom:7px}
+  #msgD .dbL{font-size:13px;line-height:1.55;color:#cfe3f5;padding:3px 0 3px 14px;position:relative}
+  #msgD .dbL::before{content:'▸';position:absolute;left:0;color:#9fd8ff}
 
   /* ── narrow screens ─────────────────────────────────────────────────────
      The desktop layout is a fixed 880×600 board with a 252px shop beside it,
@@ -319,7 +325,9 @@
     <div id="wrap">
       <canvas id="gl" width="880" height="600"></canvas>
       <canvas id="cv" width="880" height="600"></canvas>
-      <div id="msg"><h1 id="msgT"></h1><p id="msgP"></p><button id="msgB" class="primary">Play again</button></div>
+      <div id="msg"><h1 id="msgT"></h1><p id="msgP"></p>
+        <div id="msgD"></div>
+        <button id="msgB" class="primary">Play again</button></div>
 
       <div id="settings" class="hide">
         <div class="sHead"><b>⚙ SETTINGS</b><button id="sClose">✕</button></div>
@@ -568,6 +576,7 @@
       <div class="row" id="rTarget"><span>Targets</span>
         <button id="bTarget" style="padding:2px 8px;font-size:11px">First</button></div>
       <button id="bUp" class="primary">Upgrade</button>
+      <button id="bMove" title="Pick this turret up and put it somewhere better (Y)">Move</button>
       <button id="bSell">Sell</button>
     </div>
     <h3 id="hGun">Guns</h3>
@@ -924,6 +933,7 @@ function newGame(){
       texts:[], zaps:[], swings:[], spawnQ:[], spawnT:0, spawning:false, prep:15,
       waveActive:false, over:false, won:false, sel:null, place:null, paused:false,
       speed:1, slowmo:false, shake:0, t:0, healBuys:{bandage:0,medkit:0}, leaked:0, killed:0,
+      leakedBy:Object.create(null),   // what got past, by type — the debrief runs on this
       permits:{1:0,2:0,3:0,4:0},   // extra turret slots bought, per seat
       smart:{1:false,2:false,3:false,4:false}, smartT:0,   // Smart Upgrade, per seat
       players:PLAYERS, score:{1:0,2:0,3:0,4:0},
@@ -1081,6 +1091,7 @@ function kill(e,src){
 function leak(e){
   const i=G.enemies.indexOf(e); if(i<0) return;
   G.enemies.splice(i,1); G.leaked++;
+  G.leakedBy[e.type]=(G.leakedBy[e.type]||0)+1;   // which things got past is the story
   SOUND.leak();
   const d=e.type==='ultra'?25:e.type==='boss'?10:1;
   if(!G.admin.god) G.lives-=d;
@@ -1088,7 +1099,7 @@ function leak(e){
   pop(W-48,e.y,'-'+d+' ♥','#e5534b');
   if(G.lives<=0){ G.lives=0; G.over=true;
     showMsg(true,'Overrun','The line broke on wave '+G.wave+' of '+WAVECAP+'.  '+G.killed+' kills · '
-      +G.towers.length+' emplacements · '+G.bots.length+' bots.'); }
+      +G.towers.length+' emplacements · '+G.bots.length+' bots.', localDebrief()); }
   syncUI();
 }
 
@@ -1210,7 +1221,7 @@ function update(dt){
         'All '+WAVECAP+' waves repelled with '+G.lives+' lives left — '+G.killed+' total kills.'
         + (got ? '\n\n🔓 NEW WEAPON UNLOCKED: '+TOWERS[got].name+' — '+TOWERS[got].desc
                  + (left? '  ('+left+' still locked)' : '  (you have them all)')
-               : '\n\nEvery weapon is already unlocked.'));
+               : '\n\nEvery weapon is already unlocked.'), localDebrief());
       syncUI();
     } else G.prep=15;
     syncUI();
@@ -3096,6 +3107,26 @@ function draw(){
   ctx.fillStyle='rgba(126,201,107,.85)'; marker(PATH[0].x+6,PATH[0].y,1);
   ctx.fillStyle='rgba(229,83,75,.9)';    marker(W-6,PATH[PATH.length-1].y,-1);
 
+  drawHeat();                            // over the road, under everything else
+
+  // Where a turret being relocated would land.
+  if(MOVING){
+    const {c,r}=tileAt(mouse.x,mouse.y);
+    if(c>=0&&c<COLS&&r>=0&&r<ROWS){
+      const ok=canBuild(c,r);
+      const cx=c*TS+TS/2, cy=r*TS+TS/2;
+      const rng=statsOf(MOVING.type,MOVING.lvl).range;
+      ctx.setLineDash([6,5]); ctx.lineDashOffset=-G.t*18;
+      ctx.strokeStyle=ok?'rgba(159,216,255,.75)':'rgba(229,83,75,.7)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(MOVING.x,MOVING.y); ctx.lineTo(cx,cy); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle=ok?'rgba(159,216,255,.10)':'rgba(229,83,75,.10)';
+      ctx.beginPath(); ctx.arc(cx,cy,rng,0,TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=ok?'rgba(159,216,255,.25)':'rgba(229,83,75,.25)';
+      ctx.fillRect(c*TS+2,r*TS+2,TS-4,TS-4);
+    }
+  }
+
   if(G.place){
     const {c,r}=tileAt(mouse.x,mouse.y);
     if(c>=0&&c<COLS&&r>=0&&r<ROWS){
@@ -3630,6 +3661,123 @@ function bestUpgrade(){
   }
   return best;
 }
+// ───────────────────────────── coverage heatmap
+// Which stretches of road are actually defended, and which are not.
+//
+// This was invisible until something leaked, and by then it is too late to
+// learn from — you see the symptom (lives gone) a long way from the cause (a
+// bend nothing covers). Same maths Smart Upgrade values turrets with, turned
+// inside out: instead of asking how much road a turret sees, ask how much
+// firepower each piece of road has pointed at it.
+// ───────────────────────────── the debrief
+// A run used to end with "Overrun. The line broke on wave 27." — the score,
+// and nothing you could act on. You saw the symptom (lives at zero) a long way
+// from the cause (a bend nothing covered, or no anti-air worth the name), so a
+// loss taught you nothing and the next run repeated it.
+// MUST match server/sim/debrief.js.
+function coveredPct(pts,air,step){
+  let total=0,seen=0;
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1],b=pts[i];
+    const dx=b.x-a.x, dy=b.y-a.y, seg=Math.hypot(dx,dy);
+    if(seg<=0) continue;
+    const n=Math.max(1,Math.ceil(seg/(step||12)));
+    for(let k=0;k<n;k++){
+      const t=(k+0.5)/n, x=a.x+dx*t, y=a.y+dy*t;
+      total++;
+      for(const u of G.towers){
+        const D=TOWERS[u.type];
+        if(air ? !D.air : !!D.noGround) continue;
+        if(dist(x,y,u.x,u.y)<=statsOf(u.type,u.lvl).range){ seen++; break; }
+      }
+    }
+  }
+  return total>0?Math.round(seen/total*100):0;
+}
+function localDebrief(){
+  const pctOf=(a,b)=>b>0?Math.round(a/b*100):0;
+  const units=[...G.towers,...G.bots];
+  const total=units.reduce((n,u)=>n+(u.dmgDone||0),0);
+  const ranked=units.map(u=>({u,dmg:u.dmgDone||0,spent:u.spent||1})).sort((a,b)=>b.dmg-a.dmg);
+  const nameOf=u=>(isBot(u)?BOTS[u.kind]:TOWERS[u.type]).name;
+  const ground=coveredPct(PATH,false), air=coveredPct(AIRPATH,true);
+  const leaks=Object.entries(G.leakedBy||{}).sort((a,b)=>b[1]-a[1]);
+  const leaked=leaks.reduce((n,x)=>n+x[1],0);
+  const out=[];
+  if(leaked>0){
+    const [wt,wc]=leaks[0];
+    const label=(ENEMIES[wt]||{name:wt}).name.toLowerCase();
+    out.push(leaked+' got past you — mostly '+label+(wc>1?'s ('+wc+' of them)':''));
+    if(wt==='flyer'&&air<70)
+      out.push('Flyers cut straight across the map and your guns that can shoot up only reach '
+        +air+'% of that line. That is the hole.');
+  } else out.push('Nothing ever got past your guns.');
+  if(ground<90) out.push((100-ground)+'% of the road had no gun covering it at all.');
+  if(ranked.length&&total>0){
+    out.push('Your best was the '+nameOf(ranked[0].u)+' — '+pctOf(ranked[0].dmg,total)
+      +'% of everything you did.');
+    const idle=ranked.filter(r=>r.dmg/total<0.02&&r.spent>=40);
+    if(idle.length){
+      const wasted=idle.reduce((n,r)=>n+r.spent,0);
+      const names=[...new Set(idle.map(r=>nameOf(r.u)))].slice(0,3).join(', ');
+      out.push(idle.length+' of your units did almost nothing ('+names+') — '+wasted
+        +'g sat in guns that never fired at much. Move them nearer the road.');
+    }
+  }
+  if(G.gold>800) out.push('You finished holding '+Math.floor(G.gold)
+    +'g. Gold in the bank defends nothing — spend it before the wave, not after.');
+  return out;
+}
+
+let HEAT=false;
+function toggleHeat(){ HEAT=!HEAT; SOUND.ui();
+  pop(W/2,150,HEAT?'coverage on':'coverage off','#9fd8ff'); }
+function heatSamples(pts,air){
+  const out=[];
+  for(let i=1;i<pts.length;i++){
+    const a=pts[i-1],b=pts[i];
+    const dx=b.x-a.x, dy=b.y-a.y, seg=Math.hypot(dx,dy);
+    if(seg<=0) continue;
+    const n=Math.max(1,Math.ceil(seg/COVER_STEP));
+    for(let k=0;k<n;k++){
+      const t=(k+0.5)/n, x=a.x+dx*t, y=a.y+dy*t;
+      let dps=0;
+      for(const u of G.towers){
+        const D=TOWERS[u.type];
+        if(air ? !D.air : !!D.noGround) continue;
+        const s=statsOf(u.type,u.lvl);
+        if(dist(x,y,u.x,u.y)>s.range) continue;
+        let targets=D.multi||1;
+        if(s.splash>0) targets*=1+s.splash/50;
+        if(D.line) targets*=4; else if(D.melee) targets*=3;
+        dps+=s.dmg*s.rate*targets;
+      }
+      out.push({x,y,dps});
+    }
+  }
+  return out;
+}
+function drawHeat(){
+  if(!HEAT||!G) return;
+  const pts=heatSamples(PATH,false);
+  if(!pts.length) return;
+  // Scale against what this wave actually needs to survive, not against the
+  // strongest point on the board — "green" has to mean "enough", or a board
+  // that is uniformly too weak still looks reassuringly green.
+  const need=Math.max(1,ENEMIES.grunt.hp*hpScale(Math.max(1,G.wave))*lateHp(Math.max(1,G.wave))/1.6);
+  ctx.save(); ctx.lineCap='round';
+  for(const p of pts){
+    const f=clamp(p.dps/need,0,1);
+    // red where nothing covers, amber thin, green solid
+    const col=f<=0.001 ? 'rgba(229,83,75,.85)'
+            : f<0.34   ? 'rgba(255,145,90,.8)'
+            : f<0.67   ? 'rgba(242,193,78,.75)'
+                       : 'rgba(110,231,168,.7)';
+    ctx.fillStyle=col;
+    ctx.beginPath(); ctx.arc(p.x,p.y,5,0,TAU); ctx.fill();
+  }
+  ctx.restore();
+}
 function runSmart(dt){
   if(!SMART||G.over) return;
   G.smartT=(G.smartT||0)-dt;
@@ -3672,6 +3820,41 @@ function buildTower(k,c,r,owner,px,py){
     kills:0,dmgDone:0,spent:cost,flash:0,spin:0,swingDir:1,ramp:0,owner};
   G.towers.push(t); burst(t.x,t.y,TOWERS[k].color,10,90); SOUND.build();
   return t;
+}
+// ── relocating a turret ──────────────────────────────────────────────────
+// Placement is the highest-leverage decision in the game and it was the only
+// one with no undo: a good tile covers ~680 px of road and a poor one covers
+// nothing, a gap worth more than several upgrade levels, and the only remedy
+// was selling at a 40% loss. The fee is a quarter of the turret's BASE price,
+// not of what has been sunk into it — charging a share of the investment would
+// make moving your best turret the most expensive thing in the game, which is
+// exactly backwards. MUST match server/sim/constants.js.
+const MOVE_FEE=0.25, MOVE_COOLDOWN=2.0;
+const moveCost=t=>Math.max(5,Math.round(TOWERS[t.type].cost*MOVE_FEE));
+let MOVING=null;                       // the turret waiting for a destination
+function moveTower(t,c,r){
+  if(!t||isBot(t)) return false;
+  if(c===t.c&&r===t.r) return false;
+  if(!canBuild(c,r)){ pop(c*TS+TS/2,r*TS+TS/2,'blocked','#e5534b'); return false; }
+  const fee=moveCost(t);
+  if(!spend(fee)){ pop(t.x,t.y,'need '+fee+'g to move it','#e5534b'); return false; }
+  const fx=t.x, fy=t.y;
+  t.c=c; t.r=r; t.x=c*TS+TS/2; t.y=r*TS+TS/2;
+  // out of action while it redeploys, and a spun-up gatling loses its wind-up
+  t.cd=Math.max(t.cd,MOVE_COOLDOWN); t.spin=0; t.ramp=0;
+  G.zaps.push({x1:fx,y1:fy,x2:t.x,y2:t.y,life:.35,col:'#9fd8ff',w:2});
+  burst(t.x,t.y,TOWERS[t.type].color,12,100);
+  pop(t.x,t.y-20,'moved  -'+fee+'g','#9fd8ff');
+  SOUND.build();
+  return true;
+}
+function startMove(){
+  const u=G.sel;
+  if(!u||isBot(u)) return;
+  if(NET.active&&u.owner!==MYSEAT){ pop(u.x,u.y-20,"that's Player "+u.owner+"'s turret",'#e5534b'); return; }
+  MOVING=u; G.place=null;
+  pop(u.x,u.y-22,'click where it should go','#9fd8ff');
+  syncUI();
 }
 function deployBot(k,x,y,owner){
   const D=BOTS[k];
@@ -3820,11 +4003,21 @@ function syncUI(){
     const mineU = !NET.active || u.owner===MYSEAT;
     $('iName').textContent = mineU ? D.name : D.name+'  ·  P'+u.owner;
     $('iName').style.color = mineU ? '' : (PCOL[u.owner]||'');
+    // Bots already walk wherever you send them, so relocating is a turret-only
+    // idea — it exists because a turret is the thing you cannot take back.
+    const canMove=!isBot(u);
+    $('bMove').style.display=canMove?'':'none';
     if(!mineU){
       $('bUp').disabled=true;   $('bUp').textContent="Player "+u.owner+"'s unit";
       $('bSell').disabled=true; $('bSell').textContent="Player "+u.owner+"'s unit";
+      $('bMove').disabled=true; $('bMove').textContent='Move';
       $('iUp').textContent='';
     } else {
+      if(canMove){
+        const mc=moveCost(u);
+        $('bMove').disabled=G.gold<mc;
+        $('bMove').textContent=(MOVING===u?'Click a tile…':'Move — '+mc+'g');
+      }
       $('bSell').disabled=false;
       $('bSell').textContent=(isBot(u)?'Recall — ':'Sell — ')+Math.floor(u.spent*.6)+'g';
       if(u.lvl>=MAXLVL){ $('bUp').disabled=true; $('bUp').textContent='Max level'; $('iUp').textContent=''; }
@@ -3848,10 +4041,19 @@ function syncUI(){
     waveDef(nx,G.players,DIFF).map(g=>`<div>${g.c}× ${ENEMIES[g.t].name}${ENEMIES[g.t].fly?' <span style="color:#d18bff">(air)</span>':''}</div>`).join('')
     +`<div style="margin-top:4px;color:#5f6b77">hp ×${hpScale(nx).toFixed(1)} · armour +${Math.floor(nx/6)}</div>`;
 }
-function showMsg(on,t,p){
+function showMsg(on,t,p,lines){
   const m=$('msg'); m.style.display=on?'grid':'none';
-  if(on){ $('msgT').textContent=t; $('msgT').style.color=G.won?'#6ee7a8':'#e5534b';
-    $('msgP').innerHTML=String(p).split('\n').map(l=>l?l.replace(/&/g,'&amp;').replace(/</g,'&lt;'):'').join('<br>'); }
+  if(!on) return;
+  $('msgT').textContent=t; $('msgT').style.color=G.won?'#6ee7a8':'#e5534b';
+  $('msgP').innerHTML=String(p).split('\n').map(l=>l?escHtml(l):'').join('<br>');
+  // The debrief. A score tells you how it went; this tells you why, which is
+  // the only part you can do anything with next run.
+  const d=$('msgD');
+  if(lines&&lines.length){
+    d.style.display='block';
+    d.innerHTML='<div class="dbT">What happened</div>'
+      +lines.map(l=>'<div class="dbL">'+escHtml(l)+'</div>').join('');
+  } else d.style.display='none';
 }
 
 const mouse={x:-99,y:-99};
@@ -3923,6 +4125,14 @@ cv.addEventListener('click',ev=>{
     syncUI(); return;
   }
   const p=toCanvas(ev), {c,r}=tileAt(p.x,p.y);
+  // Relocating: the next click on the board is where the turret goes. Handled
+  // before anything else so it cannot be mistaken for a build or a selection.
+  if(MOVING){
+    const t=MOVING; MOVING=null;
+    if(NET.active) intent({a:'move',id:t.id,c,r});
+    else moveTower(t,c,r);
+    syncUI(); return;
+  }
   if(NET.active){
     // Online: ask, never mutate. The next snapshot is what makes it real.
     if(G.place&&BOTS[G.place]){ intent({a:'deploy',k:G.place,x:p.x,y:p.y}); G.place=null; syncUI(); return; }
@@ -3989,6 +4199,7 @@ $('bUp').onclick=()=>{
   if(isBot(u)&&!u.dead) u.hp=botStats(u.kind,u.lvl).hp;
   burst(u.x,u.y,'#f2c14e',12,110); pop(u.x,u.y-20,'LVL '+u.lvl,'#f2c14e'); syncUI();
 };
+$('bMove').onclick=()=>{ SOUND.ui(); startMove(); };
 $('bSell').onclick=()=>{
   const u=G.sel; if(!u) return;
   SOUND.sell();
@@ -4710,7 +4921,7 @@ addEventListener('keydown',ev=>{
   }
 
   // NET.selId has to be cleared too, or the next snapshot re-selects the unit.
-  if(k==='escape'){ G.place=null; G.sel=null; NET.selId=0; syncUI(); }
+  if(k==='escape'){ MOVING=null; G.place=null; G.sel=null; NET.selId=0; syncUI(); }
   else if(k===' '){ ev.preventDefault();
     if(!FP.avatar){ G.paused=!G.paused; syncUI(); }   // space flies when your soldier is on the map
   }
@@ -4719,6 +4930,8 @@ addEventListener('keydown',ev=>{
   // our mirror of G and flickered until the next snapshot overwrote it.
   else if(k==='enter'){ $('bWave').click(); }
   else if(k==='u'){ $('bUp').click(); }
+  else if(k==='y'){ $('bMove').click(); }        // m is the medkit, so: Y to yank
+  else if(k==='c'){ toggleHeat(); }
   else if(k==='x'){ $('bSell').click(); }
   else if(k==='b'){ buyHeal('bandage'); }
   else if(k==='m'){ buyHeal('medkit'); }
@@ -5129,7 +5342,10 @@ function netEvents(list){
 }
 function netShowOutcome(){
   const o=NET.outcome;
-  showMsg(true, o?o.title:(G.won?'Line Held':'Overrun'), o?o.body:'');
+  // The server sends a debrief per seat — each player built a different half
+  // of the board, so the useful advice is about their own half.
+  const lines=(o&&Array.isArray(o.debrief)) ? o.debrief[MYSEAT-1] : null;
+  showMsg(true, o?o.title:(G.won?'Line Held':'Overrun'), o?o.body:'', lines);
   $('msgB').textContent = NET.isHost ? 'Play again' : 'Waiting for the host…';
   $('msgB').disabled = !NET.isHost;
 }
@@ -5457,6 +5673,8 @@ window.__mouseX=()=>mouse.x; window.__mouseY=()=>mouse.y;
 window.__netEvents=netEvents; window.__seat=()=>MYSEAT;
 window.__smart={runSmart,bestUpgrade,towerValue,botValue,threatMix,roadCovered,
   PATH:()=>PATH,AIRPATH:()=>AIRPATH,on:()=>SMART};
+window.__syncUI=syncUI; window.__update=update; window.__heat=()=>HEAT;
+window.__moving=()=>MOVING; window.__debrief=localDebrief;
 })();
 </script>
 </body>
