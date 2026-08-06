@@ -10,3 +10,13 @@ node_modules/
 
 # Database credentials live on the server only
 server/.env
+
+# Secrets. This repository is PUBLIC, and deploys run `git add -A` — anything
+# matched here is a credential that must never reach a commit. The deploy key
+# itself is deliberately NOT kept in this folder; ops/deploy.env records where
+# it lives, and that file is ignored too.
+*.pem
+*.ppk
+*.key
+id_rsa*
+ops/deploy.env
