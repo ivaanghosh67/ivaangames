@@ -78,7 +78,11 @@ function roadCovered(pts, x, y, range) {
 export function threatMix(sim) {
   const G = sim.G;
   const next = Math.min(sim.maxWave, G.wave + (G.waveActive ? 0 : 1));
-  const w = waveDef(Math.max(1, next), sim.maxWave, sim.players, sim.diffKey);
+  // campaignWave, not maxWave: the sim spawns waves against the length of the
+  // campaign, and in endless maxWave is the 400-wave backstop instead. Reading
+  // the wrong one had Smart Upgrade sizing an endless wave off a curve nothing
+  // was ever spawned from.
+  const w = waveDef(Math.max(1, next), sim.campaignWave, sim.players, sim.diffKey);
   let air = 0, ground = 0;
   for (const g of w) {
     const e = ENEMIES[g.t];
@@ -93,7 +97,7 @@ export function threatMix(sim) {
   return {
     air: tot > 0 ? air / tot : 0,
     ground: tot > 0 ? ground / tot : 1,
-    armor: armorOf(0, Math.max(1, next)),
+    armor: armorOf(0, Math.max(1, next), sim.campaignWave),
   };
 }
 

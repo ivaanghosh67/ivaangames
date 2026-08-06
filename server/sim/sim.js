@@ -20,7 +20,7 @@ import {
   clamp, dist, TOWERS, BOTS, HEALS, ENEMIES, TKEYS, BKEYS,
   hpScale, bossHp, goldScale, armorOf, waveDef, statsOf, botStats,
   kitOf, canUse, upCostOf, healCostOf, PCOL,
-  diffOf, partyScale, bossRamp, ENDLESS_CAP, lateHp, meleeScale, towerCapOf, permitCostOf,
+  diffOf, partyScale, bossRamp, ENDLESS_CAP, lateHp, lateSpeed, meleeScale, towerCapOf, permitCostOf,
 } from './constants.js';
 import { makeRng } from './rng.js';
 import { loadMap, pickMap } from './map.js';
@@ -216,12 +216,17 @@ export class Sim {
     // every measured solo run was dying
     const hp = (type === 'ultra' ? bossHp(G.wave) * 4.5
       : type === 'boss' ? bossHp(G.wave) * bossRamp(G.wave)
-      : b.hp * hpScale(G.wave)) * (G.admin.hpMul || 1) * this.diff.hp * lateHp(G.wave);
+      : b.hp * hpScale(G.wave)) * (G.admin.hpMul || 1) * this.diff.hp
+      * lateHp(G.wave, this.campaignWave);
     const p = b.fly ? this.map.airpath : this.map.path;
+    // The late curve is solved against the length of THIS campaign, so pass the
+    // campaign wave rather than the endless cap — an endless run keeps the
+    // shape of the run it grew out of and simply carries on past the end of it.
+    const late = lateSpeed(G.wave, this.campaignWave);
     G.enemies.push({
       id:this.id(), type, x:p[0].x, y:p[0].y, wp:1, hp, maxhp:hp,
-      speed:b.speed * (type === 'boss' ? 1 : (.94 + rnd() * .12)),
-      armor:armorOf(b.armor, G.wave), r:b.r, fly:b.fly,
+      speed:b.speed * late * (type === 'boss' ? 1 : (.94 + rnd() * .12)),
+      armor:armorOf(b.armor, G.wave, this.campaignWave), r:b.r, fly:b.fly,
       dps:b.dps * meleeScale(G.wave),
       gold:Math.round(b.gold * goldScale(G.wave)),
       slowT:0, slowF:1, prog:0, angle:0, hit:0, block:null,

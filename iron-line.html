@@ -837,12 +837,49 @@ try{ const d=localStorage.getItem(DIFFKEY); if(DIFFICULTY[d]) DIFF=d; }catch(_){
 const PARTY_COEFF=0.8;
 const partyScale=p=>1+PARTY_COEFF*(Math.max(1,p)-1);
 const bossRamp=n=>(n>=12?1:0.45+0.55*Math.max(0,n-5)/7);
-// Late-game escalation, mirroring the server. Enemy headcounts are clamped per
-// type and those clamps bind by about wave 20; without these a wave only ever
-// got tankier, never bigger, and a full board of maxed turrets was never
-// threatened again. Waves 1-25 are unchanged.
-const lateHp=n=>1+Math.max(0,n-25)*0.12;
-const lateCount=n=>1+Math.max(0,n-25)*0.02;
+// Late-game escalation, mirroring the server EXACTLY — the reasoning lives in
+// full in server/sim/constants.js. Enemy headcounts are clamped per type and
+// those clamps bind by about wave 20; without these a wave only ever got
+// tankier, never bigger, and a full board of maxed turrets was never
+// threatened again.
+//
+// Both curves used to read `n - 25` on a fixed slope, and that slope was fitted
+// against the 100-wave party campaign. It never fires at all in a solo run:
+// measured with test/ceiling.js, the strongest board the rules allow took its
+// first leak at wave 80, and solo ends at 50. The fail point sat thirty waves
+// past the finish line, so the back half of every solo run was a formality.
+//
+// The slope is now solved for where the run actually ENDS, so the last third of
+// a campaign is the dangerous part whatever its length. The onset stays at wave
+// 25 in absolute terms, so nothing before it moves for anyone. Solved against
+// the tuned party campaign, so party break points are unchanged: measured at
+// wave 80 for a duo and 90 for a squad, exactly where they were.
+const LATE_FROM=25;
+const END_HP=2100, END_COUNT=2.5, END_SPEED=1.75, RAMP_POW=0.75;
+const END_ARMOR=40, END_AIR=1.8;
+// Below 1 the ramp keeps the same endpoint but lifts the middle — a straight
+// line left party wave 60 taking zero leaks on 112,000 banked gold.
+const lateRamp=(n,mw)=>Math.pow(Math.max(0,n-LATE_FROM)/Math.max(1,mw-LATE_FROM),RAMP_POW);
+const lateHp=(n,mw=MAXWAVE)=>1+Math.max(0,END_HP/hpScale(mw)-1)*lateRamp(n,mw);
+const lateCount=(n,mw=MAXWAVE)=>1+(END_COUNT-1)*lateRamp(n,mw);
+// How much faster the late waves move. Health is the one stat that makes a
+// fight take LONGER without making it more dangerous — the same maxed board
+// cleared wave 40 in 15.6s and wave 80 in 197s, never once in doubt. Speed cuts
+// dwell time inside a turret's range, which is a real cut to effective DPS, and
+// it makes the wave shorter rather than longer. It is also already in every
+// snapshot, so unlike extra bodies it costs nothing on the wire.
+const lateSpeed=(n,mw=MAXWAVE)=>1+(END_SPEED-1)*lateRamp(n,mw);
+// What the late waves are MADE OF, not merely how much of them there is. Air is
+// the one axis the arsenal genuinely disagrees on — launcher, blade and
+// greatsword cannot touch it, flak can touch nothing else — and flyers ignore
+// the road entirely, so they are a different PLACEMENT problem rather than just
+// another target. The ground groups are trimmed to pay for the extra flyers, so
+// the wave changes shape instead of simply getting bigger: difficulty is the
+// job of the curves above, and this lever exists to make one-gun boards wrong.
+const lateAir=(n,mw=MAXWAVE)=>1+(END_AIR-1)*lateRamp(n,mw);
+const AIR_CAP=22, GROUND_CAP=34+26+16;      // the per-type headcount ceilings
+const lateGround=(n,mw=MAXWAVE)=>
+  Math.max(0.4,(AIR_CAP+GROUND_CAP-AIR_CAP*lateAir(n,mw))/GROUND_CAP);
 
 const MAXWAVE=50;
 // How long THIS run is. Offline it is always 50; online the server decides
@@ -866,17 +903,30 @@ const MELEE_FLAT_TO = 10;
 const meleeScale = n =>
   Math.max(1, Math.sqrt(hpScale(n)) - Math.sqrt(hpScale(MELEE_FLAT_TO)) + 1);
 const goldScale = n => 1 + .04*(n-1);
-const armorOf = (base,n) => base + Math.floor(n/6);
+// Armour is flat subtraction per hit, which makes it the one stat that asks
+// about damage PER SHOT rather than per second — a level-1 gatling firing 5.5
+// into 48 armour does nothing at all, the same gun at level 10 loses a quarter,
+// a maxed minigun barely notices, and sniper/laser/railgun pierce it outright.
+// So it prices sprawl, rewards levels, and gives the piercing guns a job that
+// nothing else can do. The base `n/6` curve is kept exactly as it was and the
+// campaign-keyed part is added on top behind the same ramp, so every wave up to
+// 25 subtracts precisely what it always did. MUST match the server.
+const armorOf = (base,n,mw=MAXWAVE) =>
+  base + Math.floor(Math.max(0,n)/6 + END_ARMOR*lateRamp(n,mw));
 
 function waveDef(n,players,diffKey){
   const P=players||(G?G.players:1)||1, D=diffOf(diffKey||DIFF);
-  const mul=partyScale(P)*D.count, gm=Math.sqrt(mul), late=lateCount(n);
+  const mul=partyScale(P)*D.count, gm=Math.sqrt(mul), late=lateCount(n,CAMPAIGN);
   const cap=(x,m)=>Math.max(1,Math.min(Math.round(m*mul*late),Math.round(x*mul*late)));
   const m=n*2;                                  // curve compressed into half the waves
-  const w=[{t:'grunt', c:cap(6+m*1.15,34), g:Math.max(.22,.85-m*.012)/gm}];
-  if(n>=2) w.push({t:'runner', c:cap(3+m*.7,26), g:Math.max(.18,.45-m*.004)/gm});
-  if(n>=3) w.push({t:'flyer',  c:cap(2+m*.5,22), g:Math.max(.24,.6-m*.005)/gm});
-  if(n>=4) w.push({t:'tank',   c:cap(1+m/3.2,16), g:Math.max(.38,1.05-m*.007)/gm});
+  // The late mix tilts towards the air and the ground groups are trimmed to pay
+  // for it, so the wave changes shape rather than getting bigger. Both are 1
+  // until wave 25, so the opening is untouched.
+  const air=lateAir(n,CAMPAIGN), grd=lateGround(n,CAMPAIGN);
+  const w=[{t:'grunt', c:cap((6+m*1.15)*grd,34*grd), g:Math.max(.22,.85-m*.012)/gm}];
+  if(n>=2) w.push({t:'runner', c:cap((3+m*.7)*grd,26*grd), g:Math.max(.18,.45-m*.004)/gm});
+  if(n>=3) w.push({t:'flyer',  c:cap((2+m*.5)*air,22*air), g:Math.max(.24,.6-m*.005)/gm});
+  if(n>=4) w.push({t:'tank',   c:cap((1+m/3.2)*grd,16*grd), g:Math.max(.38,1.05-m*.007)/gm});
   // a boss every wave from 5, plus one more every ten waves
   if(n>=5) w.push({t:'boss', c:Math.max(1,Math.round((1+Math.floor((n-5)/10))*(1+0.4*(P-1)))), g:2.2});
   if(n===WAVECAP-1) w.push({t:'ultra', c:Math.max(3,Math.round(3*partyScale(P))), g:6});   // Ultra Bosses
@@ -1030,11 +1080,15 @@ function spawn(type){
   const b=ENEMIES[type];
   const hp=(type==='ultra'? bossHp(G.wave)*4.5
            : type==='boss' ? bossHp(G.wave)*bossRamp(G.wave)
-           : b.hp*hpScale(G.wave))*(G.admin.hpMul||1)*diffOf(DIFF).hp*lateHp(G.wave);
+           : b.hp*hpScale(G.wave))*(G.admin.hpMul||1)*diffOf(DIFF).hp*lateHp(G.wave,CAMPAIGN);
   const p=b.fly?AIRPATH:PATH;
+  // The late curve is solved against the length of THIS campaign, so it reads
+  // CAMPAIGN rather than WAVECAP — an endless run keeps the shape of the run it
+  // grew out of and simply carries on past the end of it.
+  const lateSp=lateSpeed(G.wave,CAMPAIGN);
   G.enemies.push({type,x:p[0].x,y:p[0].y,wp:1,hp,maxhp:hp,
-    speed:b.speed*(type==='boss'?1:(.94+Math.random()*.12)),
-    armor:armorOf(b.armor,G.wave), r:b.r, fly:b.fly, dps:b.dps*meleeScale(G.wave),
+    speed:b.speed*lateSp*(type==='boss'?1:(.94+Math.random()*.12)),
+    armor:armorOf(b.armor,G.wave,CAMPAIGN), r:b.r, fly:b.fly, dps:b.dps*meleeScale(G.wave),
     gold:Math.round(b.gold*goldScale(G.wave)),slowT:0,slowF:1,prog:0,angle:0,hit:0,block:null,
     // Who hurt this enemy and by how much — index 0 is nobody in particular.
     // Couch co-op shares one purse, so this only decides the scoreboard and
@@ -3594,7 +3648,7 @@ function threatMix(){
     if(e.fly) air+=bulk; else ground+=bulk;
   }
   const tot=air+ground;
-  return {air:tot>0?air/tot:0, ground:tot>0?ground/tot:1, armor:armorOf(0,Math.max(1,next))};
+  return {air:tot>0?air/tot:0, ground:tot>0?ground/tot:1, armor:armorOf(0,Math.max(1,next),CAMPAIGN)};
 }
 function towerValue(t,lvl,mix){
   const D=TOWERS[t.type]; if(!D) return 0;
@@ -3764,7 +3818,7 @@ function drawHeat(){
   // Scale against what this wave actually needs to survive, not against the
   // strongest point on the board — "green" has to mean "enough", or a board
   // that is uniformly too weak still looks reassuringly green.
-  const need=Math.max(1,ENEMIES.grunt.hp*hpScale(Math.max(1,G.wave))*lateHp(Math.max(1,G.wave))/1.6);
+  const need=Math.max(1,ENEMIES.grunt.hp*hpScale(Math.max(1,G.wave))*lateHp(Math.max(1,G.wave),CAMPAIGN)/1.6);
   ctx.save(); ctx.lineCap='round';
   for(const p of pts){
     const f=clamp(p.dps/need,0,1);
@@ -4039,7 +4093,15 @@ function syncUI(){
   const nx=G.wave+1;
   $('nextInfo').innerHTML = nx>WAVECAP ? 'All waves cleared.' :
     waveDef(nx,G.players,DIFF).map(g=>`<div>${g.c}× ${ENEMIES[g.t].name}${ENEMIES[g.t].fly?' <span style="color:#d18bff">(air)</span>':''}</div>`).join('')
-    +`<div style="margin-top:4px;color:#5f6b77">hp ×${hpScale(nx).toFixed(1)} · armour +${Math.floor(nx/6)}</div>`;
+    // The preview quoted the base health curve only, so from wave 25 on it
+    // under-reported what was actually coming by the whole late multiplier —
+    // and said nothing at all about speed, which is the stat most likely to be
+    // the reason a wave suddenly gets past you. You cannot plan against numbers
+    // you are not shown.
+    +`<div style="margin-top:4px;color:#5f6b77">hp ×${(hpScale(nx)*lateHp(nx,CAMPAIGN)).toFixed(1)}`
+    + ` · armour +${armorOf(0,nx,CAMPAIGN)}`
+    + (lateSpeed(nx,CAMPAIGN)>1.005 ? ` · speed ×${lateSpeed(nx,CAMPAIGN).toFixed(2)}` : '')
+    + `</div>`;
 }
 function showMsg(on,t,p,lines){
   const m=$('msg'); m.style.display=on?'grid':'none';
@@ -5668,7 +5730,8 @@ setInterval(()=>{
 window.__G=()=>G; window.__FP=FP; window.__GL=()=>GL; window.__NET=NET; window.__tutStart=tutStart; window.__tutEnd=tutEnd; window.__SFX=SFX; window.__SOUND=SOUND;
 window.__sfxInit=sfxInit; window.__sfxVolume=sfxVolume; window.__sfxAllow=sfxAllow;
 window.__T={unlockSecret,gunList,rayPierce,CKEYS,WAY:()=>WAY,PATH:()=>PATH,loadMap,MAPS,randomMap,blocked:()=>blocked,KEEP,THEMES,theme:()=>THEME,topDownFire,hurt,fpFire,useChest,magOf,waveDef,deployBot,buildTower,statsOf,botStats,spawn,kill,startReload,CARRY,TOWERS,BOTS,ENEMIES,hpScale,bossHp,maxSquads,selectSlot,cycleSlot,
-  towerCapOf,towerCap,permitCost,permitCostOf,buyPermit,meleeScale}; Object.defineProperty(window,'__fps',{get:()=>fps});
+  towerCapOf,towerCap,permitCost,permitCostOf,buyPermit,meleeScale,
+  lateHp,lateCount,lateSpeed,lateAir,lateGround,armorOf,CAMPAIGN:()=>CAMPAIGN}; Object.defineProperty(window,'__fps',{get:()=>fps});
 window.__mouseX=()=>mouse.x; window.__mouseY=()=>mouse.y;
 window.__netEvents=netEvents; window.__seat=()=>MYSEAT;
 window.__smart={runSmart,bestUpgrade,towerValue,botValue,threatMix,roadCovered,

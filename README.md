@@ -611,10 +611,83 @@ lands where it belongs — at the end of the campaign, not never:
 
 | Party | Board | First leak |
 |---|---:|---:|
-| Solo (50 waves) | 16 turrets | wave 80 — comfortably winnable |
-| Duo (100 waves) | 22 turrets | wave 90 |
-| Trio (100 waves) | 27 turrets | wave 100 |
-| Squad (100 waves) | 32 turrets | wave 100 |
+| Party | Board | First leak, before | First leak, now |
+|---|---:|---:|---:|
+| Solo (50 waves) | 18 turrets | wave 80 — *after the campaign ends* | **wave 44** |
+| Duo (100 waves) | 26 turrets | wave 90 | wave 90 |
+| Trio (100 waves) | 30 turrets | wave 100 | wave 90 |
+| Squad (100 waves) | 36 turrets | wave 100 | wave 100 |
+
+All eight measured on Regular with `test/ceiling.js`, the "before" column taken
+from the previous curve reproduced exactly rather than remembered.
+
+That solo row used to read **wave 80**, and this table used to call it
+"comfortably winnable". In a campaign that ends at 50, a fail point at wave 80
+is not comfortable, it is absent — the strongest board the rules allow could not
+be beaten by anything the game was capable of spawning, so the back half of
+every solo run was a formality.
+
+The cause was that the late-game curves keyed off the absolute wave number on a
+slope fitted to the 100-wave party campaign. They work there. They never fire at
+all in a 50-wave run, because the curve does not grow teeth until the eighties.
+The slope is now solved for where the run actually *ends*, so the last stretch
+of a campaign is the dangerous part whatever its length. The onset stays at wave
+25 in absolute terms, and every wave up to it is byte-identical to what it was —
+checked against the previous build across all party sizes. The party columns
+above are unchanged for the same reason: the fix was only ever about the length
+of the run, and a 100-wave run was already the length it was tuned for.
+
+### Faster, not just fatter
+
+Late waves now **move faster**, ending 75% up on the final wave, rather than
+only carrying more health.
+
+Health is the one stat that makes a fight take longer without making it more
+dangerous. The same maxed board cleared wave 40 in 15.6s and wave 80 in 197s and
+was never once in doubt in either — that is not difficulty, it is a three-minute
+formality. Speed cuts the dwell time inside a turret's range, which is a real
+cut to effective damage; it puts leaks back on the table for a board with a gap
+in its coverage; and it makes the wave *shorter* instead of longer. It is also
+already in every snapshot, so unlike extra bodies it costs nothing on the wire.
+
+Measured on a duo board at the identical difficulty, with the fail point landing
+on the very same wave:
+
+| | before | now |
+|---|---:|---:|
+| wave 70 clear | 87.5s | **51.6s** |
+| wave 80 clear | 154.6s | **90.6s** |
+| first leak | wave 90 | wave 90 |
+
+### Waves that change shape, not just size
+
+Every lever above is a quantity, and none of them asks you to build anything
+*different* — the strongest board is still the highest-damage gun in every legal
+tile, and no amount of scaling changes which gun that is.
+
+Two counters make a one-gun board wrong late:
+
+**The air share climbs from 22% to 40%** across the back half of a campaign, and
+the ground groups are trimmed to pay for it, so the wave changes shape rather
+than simply getting bigger. Air is the one axis the arsenal genuinely disagrees
+on — launcher, Blade Sentry and Greatsword cannot touch it, Flak can touch
+nothing else — and flyers ignore the road entirely, so they are a different
+*placement* problem rather than just another target.
+
+**Armour reaches +48 by the last solo wave** (+56 in a party run), on top of the
+base curve rather than replacing it, so nothing before wave 25 moves. Armour is
+flat subtraction per hit, which makes it the one stat that asks about damage
+**per shot** rather than per second:
+
+| | damage per shot | after +48 armour |
+|---|---:|---:|
+| Gatling, level 1 | 5.5 | 1 |
+| Gatling, level 10 | 184 | 136 |
+| Minigun, level 10 | 8,846 | 8,798 |
+| Sniper / Laser / Railgun | — | *pierces armour entirely* |
+
+So it prices sprawl, rewards levels, and finally gives the three piercing guns a
+job nothing else can do.
 
 ### 📜 Build Permits
 

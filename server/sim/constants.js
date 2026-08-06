@@ -129,7 +129,8 @@ export const EKEYS = Object.keys(ENEMIES);
 export const hpScale = n => 1 + .36 * (n - 1) + .048 * (n - 1) * (n - 1);
 export const bossHp = n => 800 * hpScale(n) * 1.5;
 export const goldScale = n => 1 + .04 * (n - 1);
-export const armorOf = (base, n) => base + Math.floor(n / 6);
+// armorOf lives further down, with the rest of the late-game curve — it is
+// defined in terms of the same ramp and reads better next to it.
 
 // ── difficulty ────────────────────────────────────────────────────────────
 // Four explicit tiers the host picks, plus the party-size scaling that keeps
@@ -192,9 +193,153 @@ export const bossRamp = n => (n >= 12 ? 1 : 0.45 + 0.55 * Math.max(0, n - 5) / 7
  * Two levers, deliberately weighted towards health rather than headcount:
  * health is free on the wire, whereas every extra body costs snapshot bandwidth
  * at 15 Hz. The count growth is the smaller number for that reason.
+ *
+ * ── why these are keyed to the campaign, not the wave number ──
+ *
+ * Both curves used to read `n - 25` with a fixed slope, and that slope was
+ * fitted against the 100-wave party campaign. It works there. It never fires
+ * at all in a solo run, because solo ends at wave 50 and the curve does not
+ * grow teeth until the 80s.
+ *
+ * Measured with test/ceiling.js — the strongest board the rules allow, pushed
+ * one wave at a time:
+ *
+ *   party 4, Iron     first leak wave 90   campaign ends 100   ✓ ends under pressure
+ *   party 2, Iron     first leak wave 80   campaign ends 100   ✓ ends under pressure
+ *   solo,    Regular  first leak wave 80   campaign ends  50   ✗ 30 waves of slack
+ *
+ * A solo player who fills their 18-turret allowance cannot lose the campaign
+ * after the opening. Not "is unlikely to" — the fail point sits thirty waves
+ * past the finish line, so the last half of every solo run is a formality.
+ *
+ * So the slope is now solved for where the run actually ENDS. Both curves hit
+ * a fixed target on the final wave whatever that wave is, which makes the back
+ * third of a run the dangerous part in a 50-wave campaign exactly as it already
+ * is in a 100-wave one. The onset stays at wave 25 in absolute terms, so no
+ * opening changes for anyone — this only ever steepens what comes after.
+ *
+ * The party numbers are deliberately a no-op: END_HP is solved so that a
+ * 100-wave campaign reproduces the old 0.12 slope to three decimals. The
+ * curve that was already measured good is the one being fitted to.
  */
-export const lateHp = n => 1 + Math.max(0, n - 25) * 0.12;
-export const lateCount = n => 1 + Math.max(0, n - 25) * 0.02;
+export const LATE_FROM = 25;
+
+/**
+ * The health multiplier a run should be facing on its final wave, hpScale and
+ * lateHp combined. The ceiling probe puts a maxed board's breaking point near
+ * 2,500× — ending well past that is what makes the last waves a real fight
+ * rather than a lap of honour.
+ *
+ *   solved from the tuned party campaign:  hpScale(100) × 10.0 ≈ 5,100
+ */
+// Tunable so the balance harness can search them without editing source, in
+// the same way PARTY_COEFF already is. In the browser, and in production, they
+// are simply the constants below.
+const tune = (name, def) =>
+  (typeof process !== 'undefined' && process.env && +process.env['IRONLINE_' + name]) || def;
+export const END_HP = tune('END_HP', 2100);
+/** Headcount is the cheaper lever on the wire, so it grows to a flat 2.5×. */
+export const END_COUNT = tune('END_COUNT', 2.5);
+
+/**
+ * The shape of the approach, not just its endpoint.
+ *
+ * A straight line spends most of the run near the bottom: the ceiling probe
+ * cleared party wave 60 with zero leaks and the reference bot sat on 112,000
+ * banked gold at wave 62, because a linear ramp is still only a third of the
+ * way up at that point. Below 1 the ramp leaves the same endpoint but lifts
+ * the middle, which is the stretch where nothing was at stake.
+ */
+export const RAMP_POW = tune('RAMP_POW', 0.75);
+const lateRamp = (n, maxWave) =>
+  Math.pow(Math.max(0, n - LATE_FROM) / Math.max(1, maxWave - LATE_FROM), RAMP_POW);
+
+export const lateHp = (n, maxWave = MAXWAVE) =>
+  1 + Math.max(0, END_HP / hpScale(maxWave) - 1) * lateRamp(n, maxWave);
+export const lateCount = (n, maxWave = MAXWAVE) =>
+  1 + (END_COUNT - 1) * lateRamp(n, maxWave);
+
+/**
+ * How much faster the late waves move.
+ *
+ * The ceiling probe found the other half of the problem: late waves were not
+ * getting harder, they were getting LONGER. Same board, same zero leaks:
+ *
+ *   wave 40   cleared in  15.6s
+ *   wave 70   cleared in 127.8s
+ *   wave 80   cleared in 197.0s
+ *
+ * That is what pure health scaling buys — a three-minute wave that is in no
+ * doubt from the first second. Health is the one stat that makes a fight take
+ * longer without making it more dangerous.
+ *
+ * Speed is the opposite, and it is the one lever that costs nothing on the
+ * wire: it is already in every snapshot. Less dwell time inside a turret's
+ * range is a real cut to effective DPS, it puts leaks back on the table for a
+ * board with a gap in its coverage, and it makes the wave shorter rather than
+ * longer. Ends at 1.35× on the final wave.
+ */
+export const END_SPEED = tune('END_SPEED', 1.75);
+export const lateSpeed = (n, maxWave = MAXWAVE) =>
+  1 + (END_SPEED - 1) * lateRamp(n, maxWave);
+
+/**
+ * Armour — the counter to buying width instead of depth.
+ *
+ * Armour is flat subtraction per hit, which makes it the one stat that asks
+ * about damage PER SHOT rather than damage per second. That is exactly the
+ * question a board of cheap unupgraded guns answers badly:
+ *
+ *   gatling  L1     5.5 dmg − 48 armour  →  1        (a rounding error)
+ *   gatling  L10    184 dmg − 48 armour  →  136      (−26%)
+ *   minigun  L10   8846 dmg − 48 armour  →  8798     (barely notices)
+ *   sniper / laser / railgun              →  pierces armour entirely
+ *
+ * So it prices sprawl, rewards levels, and gives the three piercing guns a job
+ * that nothing else can do — which is the same decision the turret allowance is
+ * already trying to force, applied to what you build rather than how much.
+ *
+ * The old `n / 6` was fitted to a 100-wave run and reached +16 at the end of
+ * it, so a 50-wave campaign stopped on half the armour it was built to finish
+ * on. The base curve is kept exactly as it was and the campaign-keyed part is
+ * added on top of it, gated behind the same ramp as everything else — so every
+ * wave up to 25 subtracts precisely what it always did, for every party size.
+ */
+export const END_ARMOR = tune('END_ARMOR', 40);
+export const armorOf = (base, n, maxWave = MAXWAVE) =>
+  base + Math.floor(Math.max(0, n) / 6 + END_ARMOR * lateRamp(n, maxWave));
+
+/**
+ * What the late waves are MADE OF, not merely how much of them there is.
+ *
+ * Every lever above is a quantity: more health, more speed, more bodies. None
+ * of them asks the player to build anything different, and the ceiling probe
+ * proves it — the strongest board is simply the highest-DPS gun in every legal
+ * tile, and no amount of scaling changes which gun that is.
+ *
+ * Air is the one axis the arsenal genuinely disagrees on. Flyers ignore the
+ * road entirely and cut straight for the keep, so they are not merely a target
+ * type, they are a different PLACEMENT problem — a board perfectly lined along
+ * the road can be perfectly useless against them. And the split is real:
+ *
+ *   ground only          launcher · blade · greatsword
+ *   air only             flak
+ *   both                 pistol · gatling · minigun · sniper · laser ·
+ *                        railgun · plasma
+ *
+ * So the late mix tilts towards the air, and — this is the part that matters —
+ * the ground groups are trimmed to pay for it. The wave does not get bigger,
+ * it gets DIFFERENT. Difficulty is already handled by the curves above; this
+ * lever is here to make one-gun boards wrong, not to add another multiplier on
+ * top of the ones that are already measured.
+ */
+export const END_AIR = tune('END_AIR', 1.8);
+export const lateAir = (n, maxWave = MAXWAVE) =>
+  1 + (END_AIR - 1) * lateRamp(n, maxWave);
+// The per-type headcount ceilings, which is what actually binds this late.
+const AIR_CAP = 22, GROUND_CAP = 34 + 26 + 16;
+export const lateGround = (n, maxWave = MAXWAVE) =>
+  Math.max(0.4, (AIR_CAP + GROUND_CAP - AIR_CAP * lateAir(n, maxWave)) / GROUND_CAP);
 
 /**
  * How hard an enemy hits the thing standing in front of it.
@@ -252,7 +397,7 @@ export function waveDef(n, maxWave = MAXWAVE, players = 1, diffKey = 'regular') 
   // lift the per-group ceilings — otherwise a 4-player Iron wave would cap out
   // at exactly the same 34 grunts a solo Recruit wave does.
   const mul = partyScale(players) * D.count;
-  const late = lateCount(n);            // waves must keep GROWING, not just tanking
+  const late = lateCount(n, maxWave);   // waves must keep GROWING, not just tanking
   const cap = (x, m) => Math.max(1, Math.min(Math.round(m * mul * late), Math.round(x * mul * late)));
   // Spawn gaps tighten by only the SQUARE ROOT of the multiplier. Dividing them
   // by the full multiplier keeps the wave the same length while tripling its
@@ -261,10 +406,14 @@ export function waveDef(n, maxWave = MAXWAVE, players = 1, diffKey = 'regular') 
   // enemies and partly a longer wave, and instantaneous pressure stays sane.
   const gm = Math.sqrt(mul);
   const m = n * 2;
-  const w = [{ t:'grunt', c:cap(6 + m * 1.15, 34), g:Math.max(.22, .85 - m * .012) / gm }];
-  if (n >= 2) w.push({ t:'runner', c:cap(3 + m * .7, 26), g:Math.max(.18, .45 - m * .004) / gm });
-  if (n >= 3) w.push({ t:'flyer',  c:cap(2 + m * .5, 22), g:Math.max(.24, .6 - m * .005) / gm });
-  if (n >= 4) w.push({ t:'tank',   c:cap(1 + m / 3.2, 16), g:Math.max(.38, 1.05 - m * .007) / gm });
+  // The late mix tilts towards the air, and the ground groups are trimmed to
+  // pay for it, so the wave changes shape rather than simply getting bigger.
+  // Both multipliers are 1 until wave 25, so the opening is untouched.
+  const air = lateAir(n, maxWave), grd = lateGround(n, maxWave);
+  const w = [{ t:'grunt', c:cap((6 + m * 1.15) * grd, 34 * grd), g:Math.max(.22, .85 - m * .012) / gm }];
+  if (n >= 2) w.push({ t:'runner', c:cap((3 + m * .7) * grd, 26 * grd), g:Math.max(.18, .45 - m * .004) / gm });
+  if (n >= 3) w.push({ t:'flyer',  c:cap((2 + m * .5) * air, 22 * air), g:Math.max(.24, .6 - m * .005) / gm });
+  if (n >= 4) w.push({ t:'tank',   c:cap((1 + m / 3.2) * grd, 16 * grd), g:Math.max(.38, 1.05 - m * .007) / gm });
   // From wave 5 on, every wave brings a boss, and one more every ten waves:
   // 1 from wave 5, 2 from 15, 3 from 25 … 10 at wave 100.
   //
